@@ -1,5 +1,5 @@
-# dsh-pulse bundle: mount the host half under its package name,
+# dsh-ping bundle: mount the host half under its package name,
 # resolved through the profile's node_modules.
 - insert:
-    - id: dsh-pulse
-      name: dsh-pulse
+    - id: dsh-ping
+      name: dsh-ping

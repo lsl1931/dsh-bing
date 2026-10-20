@@ -1,6 +1,6 @@
-# dsh-pulse
+# dsh-ping
 
-给 DSH 桌面端的**带项目名的 Windows 通知**，外加一套**电子、极简**、可以逐个试听和替换的提示音。
+给 DSH 桌面端的**带项目名 Windows 通知**：会话结束时 **ping** 你一下，外加一套**电子、极简**、可以逐个试听和替换的提示音。
 
 > 当前状态：**脚手架 + 设计稿**。仓库可以构建、音效已经生成，但插件本体（M1 起）还没实现。
 > 完整的代码级设计见 [PLAN.md](PLAN.md)。现在安装它不会弹任何通知。
@@ -60,7 +60,7 @@
 
 仓库放在固定目录（profile 会用链接指向它）：
 
-    & "<DSH 桌面端安装目录>\resources\runtime\cli\bin\dsh.cmd" plugin --profile desktop add "link:C:\RJ\dsh-plugins\dsh-pulse"
+    & "<DSH 桌面端安装目录>\resources\runtime\cli\bin\dsh.cmd" plugin --profile desktop add "link:C:\RJ\dsh-plugins\dsh-ping"
 
 然后重启 DSH 桌面端。不要和 dsh-notify-desktop 同时启用，否则同一轮会弹两条通知。
 

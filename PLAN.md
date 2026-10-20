@@ -1,8 +1,8 @@
-# dsh-pulse 实现规划
+# dsh-ping 实现规划
 
 - 状态：设计稿 v0.2（2026-10-19，名字与音色方向已定）
 - 目标运行时：DSH 桌面端 0.2.1-rc.2（Windows profile desktop）
-- 名字：dsh-pulse（脉冲），对应电子/极简的音色与交互方向
+- 名字：dsh-ping（会话结束时 ping 一下），对应电子/极简的音色与交互方向
 - 参考实现：dsh-notify-desktop 0.1.1（MIT）
 - 本文回答一个问题：**接下来写代码时，每个文件负责什么、数据从哪来、失败时怎么办。**
 
@@ -48,7 +48,7 @@
 
 ## 3. 与原插件的差异（设计决定）
 
-| 维度 | dsh-notify-desktop 0.1.1 | dsh-pulse（本仓库） | 理由 |
+| 维度 | dsh-notify-desktop 0.1.1 | dsh-ping（本仓库） | 理由 |
 | --- | --- | --- | --- |
 | 标题 | workspaceName(cwd) || displayTitle | 项目名解析链：重命名过的工作区标题 → cwd basename → 真实会话标题 → DSH | 默认分区标题对所有会话都一样；未重命名工作区按 cwd 区分，重命名后才用工作区标题 |
 | 正文 | 回复摘要；没有会话标题 | 会话标题 + 摘要（最多两行 body text，摘要限 42 字符） | 用户明确抱怨“不知道是哪个项目/哪次会话” |
@@ -58,7 +58,7 @@
 | 试听 | 发一条测试 toast | 专用 /preview 路由，只播声音不弹通知 | 调音效时不该刷屏通知中心 |
 | 依赖 | TypeScript + zod + rolldown，宿主 bundle 210KB | 纯 JS、零依赖、build.mjs 只做包装 | 与本地现有插件一致，链接安装即可，不需要构建工具链 |
 | schema | zod | 手写 parse 兼容层 | registry 只用 parse；少一个 200KB 依赖 |
-| 声音目录 | 插件 sounds/ + %LOCALAPPDATA%\dsh-notify\custom | 相同模式，目录改为 dsh-pulse | 用户可自由扩展，不改代码 |
+| 声音目录 | 插件 sounds/ + %LOCALAPPDATA%\dsh-notify\custom | 相同模式，目录改为 dsh-ping | 用户可自由扩展，不改代码 |
 
 ## 4. 架构与数据流
 
@@ -66,7 +66,7 @@
 
     session/event
         │
-        ├──► host: pulse projection（turn/end + approvals，纯 fold）
+        ├──► host: ping projection（turn/end + approvals，纯 fold）
         │         │ wire: turn / reason / body / endedAt / pending[{approval,at}] / updatedAt
         │         ▼
         ├──► host: official userQuestions projection（open / continued / settled）
@@ -75,7 +75,7 @@
         └──► host: question watcher（只补 plan-review 服务级提问）
                   │ /questions 轮询
                   ▼
-    client: sessions.list 的 projectionValues（pulse + userQuestions）
+    client: sessions.list 的 projectionValues（ping + userQuestions）
         │
         ├── 判定：turn 前进？approval 新增？userQuestions.active 新增？新鲜？去重？有焦点？
         │
@@ -83,7 +83,7 @@
         ├── 组装文案（项目 · 状态 / 会话标题 / 摘要）
         │
         ▼
-    POST /dsh-pulse/toast ──► PowerShell：ToastNotification + SoundPlayer
+    POST /dsh-ping/toast ──► PowerShell：ToastNotification + SoundPlayer
         ▲
         │
     client: settings store（localStorage）◄── 设置页 / 插件页的选择器
@@ -96,7 +96,7 @@
 
 ## 5. 目录结构
 
-    dsh-pulse/
+    dsh-ping/
       package.json            包元数据、dsh.client.inject、脚本
       cordis.patch.yml        把宿主半挂到 Loader
       build.mjs               复制宿主半 + 包装客户端半（零依赖）
@@ -144,7 +144,7 @@
 
 ### 6.1 入口
 
-    export const name = 'dsh-pulse'
+    export const name = 'dsh-ping'
     export const inject = ['sessionProjections']
 
     export function apply(ctx) {
@@ -155,7 +155,7 @@
 - 只依赖 sessionProjections；webServer 用 inject 子作用域，缺失时投影仍然工作（客户端会退回渲染层通知）。
 - 所有 ctx.effect 都要有唯一 label，便于诊断。
 
-### 6.2 pulse projection
+### 6.2 ping projection
 
 状态（会进 checkpoint，必须可 JSON 序列化）：
 
@@ -196,7 +196,7 @@ definition 必须显式给 stateVersion（registry 会校验 Number.isSafeIntege
 
 ### 6.3 路由
 
-统一前缀 /dsh-pulse，全部 same-origin header 校验；POST 才接受写操作；body 上限 8KB。
+统一前缀 /dsh-ping，全部 same-origin header 校验；POST 才接受写操作；body 上限 8KB。
 
 | 路由 | 方法 | 请求 | 响应 | 用途 |
 | --- | --- | --- | --- | --- |
@@ -236,7 +236,7 @@ definition 必须显式给 stateVersion（registry 会校验 Number.isSafeIntege
     resolveSound(id) -> { event?: string, wav?: string, silent?: boolean }
 
 - builtin:<name>：只接受 catalog.json 里存在的 id，文件路径 = 插件 sounds/<file>。
-- custom:<file>：只接受 SAFE_SOUND_NAME（无路径分隔符、拒绝 '..' 片段），路径 = %LOCALAPPDATA%\dsh-pulse\custom\<file>。
+- custom:<file>：只接受 SAFE_SOUND_NAME（无路径分隔符、拒绝 '..' 片段），路径 = %LOCALAPPDATA%\dsh-ping\custom\<file>。
 - system:<key>：映射到 Windows 系统事件或 %SystemRoot%\Media 下的 wav（白名单）。
 - silent：不播。
 - 任何未知 id 回落到默认事件，不抛错。
@@ -265,7 +265,7 @@ definition 必须显式给 stateVersion（registry 会校验 Number.isSafeIntege
 
 - sessions：session list（byId / ids / projectionValues，含官方 userQuestions）。
 - slots：settings.section 与 settings.plugins.tab。
-- locale：注册 pulse 命名空间。
+- locale：注册 ping 命名空间。
 - workspaces 用 ctx.get('workspaces') **可选读取**，不要放进 inject：它只用于项目名富化，缺了也必须照常通知。
 - uiWorkspace 同样可选：v1 点通知只 focus 窗口，不调用 openSession；以后壳支持跳会话时再启用。
 - 依赖加载顺序写在 package.json 的 dsh.client.inject（sessions 控制器、settings、locale、workspace），这不是硬 inject。
@@ -317,7 +317,7 @@ definition 必须显式给 stateVersion（registry 会校验 Number.isSafeIntege
 
 - turn 前进：previousTurn !== undefined && turn > previousTurn。
 - turn 新鲜度：projection.endedAt 与 now 相差 <= 60 秒；启动时折叠补上的旧轮次不通知。
-- approval：来自 pulse.pending，requestId 首次出现才通知；新鲜度用 pending.at（approval/asked 的 event.time），不要用 endedAt。
+- approval：来自 ping.pending，requestId 首次出现才通知；新鲜度用 pending.at（approval/asked 的 event.time），不要用 endedAt。
 - question：来自官方 userQuestions.active。callId 首次出现才通知；state === 'continued' 仍算等待，不重复弹；从 active 消失或进 settled 就结束等待。没有时间戳，首次观察时间就是 firstSeenAt。
 - plan-review：来自宿主 /questions，只处理 userQuestions 里没有同 callId 的条目；有 callId 用 callId 去重，没有再用 summary 前 40 字符做 5 秒 twin key。
 - 回退：某会话没有 userQuestions 投影（服务未启用/旧版本）时，/questions 队列接管该会话的所有提问（question + plan-review），否则会漏报。
@@ -327,7 +327,7 @@ definition 必须显式给 stateVersion（registry 会校验 Number.isSafeIntege
 
 ### 7.5 设置
 
-localStorage key：dsh-pulse.v1
+localStorage key：dsh-ping.v1
 
     {
       enabled: true,
@@ -366,9 +366,9 @@ localStorage key：dsh-pulse.v1
 
 ### 7.7 两个挂载点
 
-1. 设置 → 通知（settings.section，id: pulse，order 60）
+1. 设置 → 通知（settings.section，id: ping，order 60）
    - 总开关、提示音开关、四类结束状态、三类等待、催办分钟数、测试按钮、自定义音效管理、诊断入口。
-2. 设置 → 插件（内置插件页）→ 通知音效（settings.plugins.tab，id: pulse-sounds，order 90）
+2. 设置 → 插件（内置插件页）→ 通知音效（settings.plugins.tab，id: ping-sounds，order 90）
    - 四个场景选择器 + 试听 + 导入按钮 + “打开完整设置”链接。
    - 两个挂载点都用 ctx.slots.inject(<slotName>, () => ctx.slots.register(...)) 包一层，等插槽声明就绪再注册；直接 register 会在壳还没声明插槽时被丢弃。
    - 可行性已在 0.2.1-rc.2 的 dsh-client-ui-settings-plugins 中确认：settings.plugins.tab 是 kind: list, scope: root 的列表插槽，第三方客户端插件可以注册（inventory 自己就注册了 id: all）。
@@ -377,7 +377,7 @@ localStorage key：dsh-pulse.v1
 
 ### 7.8 样式
 
-- 只注入一个 <style data-plugin="dsh-pulse">，id 固定，重复加载不重复插入。
+- 只注入一个 <style data-plugin="dsh-ping">，id 固定，重复加载不重复插入。
 - 颜色/边框/圆角全部用 var(--dsw-alias-…)，不写死浅色/深色。
 - 选择器面板最大高度 320px，超出滚动；不改变页面布局宽度。
 - 移动端不是目标，但窄窗口下四列会换行。
@@ -417,7 +417,7 @@ localStorage key：dsh-pulse.v1
 ### 8.4 用户扩展
 
 - 内置音效：把 wav 丢进 sounds/，在 catalog.json 加一行，重新构建；适合开发者。
-- 自定义音效：设置页「添加音效…」，复制到 %LOCALAPPDATA%\dsh-pulse\custom；适合普通使用。
+- 自定义音效：设置页「添加音效…」，复制到 %LOCALAPPDATA%\dsh-ping\custom；适合普通使用。
 - 删除只删 custom，不碰内置文件。
 
 ## 9. 兼容性与风险
@@ -460,7 +460,7 @@ localStorage key：dsh-pulse.v1
 7. 点通知，窗口回到前台（不跳会话；这是宿主 Toast 点击路径的限制，不是 bug）。
 8. 通知响的时候切回窗口，声音立刻停。
 9. 等待审批/提问时弹「等你确认」，10 分钟后补一条「还在等你」；提问超时后 state=continued 时不重复弹。
-10. /dsh-pulse/debug 能看到 projection 状态、最近报告、ffmpeg 与播放器状态。
+10. /dsh-ping/debug 能看到 projection 状态、最近报告、ffmpeg 与播放器状态。
 
 ## 11. 里程碑
 
@@ -475,7 +475,7 @@ localStorage key：dsh-pulse.v1
 
 ## 12. 开放问题（需要拍板）
 
-已定：名字 dsh-pulse；音色方向电子/极简。配方仍可继续微调。
+已定：名字 dsh-ping；音色方向电子/极简。配方仍可继续微调。
 
 1. 是否要“轻/标准”两档音量：需要宿主对 wav 做增益并缓存，成本约半天。
 2. 通知正文是否要带耗时/文件数/Token：会增加 projection 字段与正文长度，v1 先不做。
