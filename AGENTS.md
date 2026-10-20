@@ -1,4 +1,4 @@
-# Repository rules for dsh-ping
+# Repository rules for dsh-bing
 
 These rules apply to every file in this repository. Read them before changing code.
 
@@ -36,7 +36,7 @@ These come from the reference implementation's field notes and are load-bearing 
 
 ## UI rules
 
-- Mount the sound pickers in both settings.section (id ping) and settings.plugins.tab (id ping-sounds). The tab lives in the Settings Plugins page (the built-in plugins section), not the desktop shell's top-level plugin manager, which exposes no slot; the Settings section is the complete page and the fallback if the tab slot changes.
+- Mount the sound pickers in both settings.section (id bing) and settings.plugins.tab (id bing-sounds). The tab lives in the Settings Plugins page (the built-in plugins section), not the desktop shell's top-level plugin manager, which exposes no slot; the Settings section is the complete page and the fallback if the tab slot changes.
 - Use DSH design tokens (var(--dsw-alias-...)); do not hard-code light/dark colours.
 - No layout shift: the picker opens as an overlay panel, max-height 320px with scroll.
 - Every preview plays only the sound, never a toast.

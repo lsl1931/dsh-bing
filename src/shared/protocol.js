@@ -1,4 +1,4 @@
-// The wire vocabulary both halves of dsh-ping must agree on.
+// The wire vocabulary both halves of dsh-bing must agree on.
 //
 // This file is the host half's copy. The browser bundle is a raw CJS body
 // wrapped by build.mjs and cannot import an ESM module, so the few constants
@@ -10,13 +10,13 @@
 // handler therefore checks its own method and the same-origin header.
 
 /** Route prefix owned by this plugin. */
-export const ROUTE_PREFIX = '/dsh-ping'
+export const ROUTE_PREFIX = '/dsh-bing'
 
 /** Same-origin header; keeps drive-by requests from other pages out. */
-export const FOCUS_HEADER = 'x-dsh-ping'
+export const FOCUS_HEADER = 'x-dsh-bing'
 
 /** The session projection key this plugin owns (distinct from 'notify'). */
-export const PROJECTION_KEY = 'ping'
+export const PROJECTION_KEY = 'bing'
 
 /** Every route, in one frozen table. */
 export const ROUTES = Object.freeze({

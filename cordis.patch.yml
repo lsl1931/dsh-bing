@@ -1,5 +1,5 @@
-# dsh-ping bundle: mount the host half under its package name,
+# dsh-bing bundle: mount the host half under its package name,
 # resolved through the profile's node_modules.
 - insert:
-    - id: dsh-ping
-      name: dsh-ping
+    - id: dsh-bing
+      name: dsh-bing
