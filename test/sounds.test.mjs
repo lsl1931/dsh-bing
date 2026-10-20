@@ -7,18 +7,18 @@ test('the built-in pack is complete and resolvable', () => {
   assert.equal(library.builtin.length, 8)
   const ids = library.builtin.map(item => item.id)
   assert.deepEqual(ids, [
-    'builtin:pulse',
-    'builtin:blip',
-    'builtin:tick',
-    'builtin:scan',
+    'builtin:aurora',
+    'builtin:marimba',
+    'builtin:kalimba',
+    'builtin:glass',
+    'builtin:bubble',
     'builtin:low',
-    'builtin:error',
-    'builtin:arc',
-    'builtin:chime',
+    'builtin:descend',
+    'builtin:bloom',
   ])
-  const resolved = resolveSound('builtin:pulse')
+  const resolved = resolveSound('builtin:aurora')
   assert.equal(typeof resolved.wav, 'string')
-  assert.ok(resolved.wav.endsWith('01-pulse.wav'))
+  assert.ok(resolved.wav.endsWith('01-aurora.wav'))
 })
 
 test('silent and unknown ids degrade safely', () => {

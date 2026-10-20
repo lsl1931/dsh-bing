@@ -1,8 +1,8 @@
 # dsh-bing 实现规划
 
-- 状态：v0.3（2026-10-19，M1–M4 已实现；M5 手工验收待做）
+- 状态：v0.4（2026-10-19，M1–M4 已实现；柔和音色包 v2；M5 手工验收待做）
 - 目标运行时：DSH 桌面端 0.2.1-rc.2（Windows profile desktop）
-- 名字：dsh-bing（会话结束时 bing 一下），对应电子/极简的音色与交互方向
+- 名字：dsh-bing（会话结束时 bing 一下），音色方向是柔和、接近手机系统提示音
 - 参考实现：dsh-notify-desktop 0.1.1（MIT）
 - 本文回答一个问题：**接下来写代码时，每个文件负责什么、数据从哪来、失败时怎么办。**
 
@@ -12,7 +12,7 @@
 
 1. 会话结束、出错、或停下来等人时弹 Windows 原生通知，**标题一定带项目名**。
 2. 通知正文带**会话标题**（这一次对话是哪一条）和结果摘要，不让用户猜。
-3. 内置一组**电子、极简、短促**的提示音（8 个，最长 0.72 秒），四类场景各自可选，**每个都能当场试听**。
+3. 内置一组**柔和、接近手机系统提示音**的铃/木琴/卡林巴/水滴（8 个，最长 1.9 秒），四类场景各自可选，**每个都能当场试听**。
 4. 音效与开关放在侧边栏 **插件 → dsh-bing 详情页**，通过官方 `plugins.bundle.config` 内联渲染；不再放设置里。
 5. 支持导入自己的音效文件；导入后出现在选择器里，可预览、可删除。
 6. 窗口有焦点时不打扰；点通知把 DSH 窗口拉回前台；切回窗口或关掉提示音时，正在响的声音立刻停。
@@ -52,7 +52,7 @@
 | --- | --- | --- | --- |
 | 标题 | workspaceName(cwd) || displayTitle | 项目名解析链：重命名过的工作区标题 → cwd basename → 真实会话标题 → DSH | 默认分区标题对所有会话都一样；未重命名工作区按 cwd 区分，重命名后才用工作区标题 |
 | 正文 | 回复摘要；没有会话标题 | 会话标题 + 摘要（最多两行 body text，摘要限 42 字符） | 用户明确抱怨“不知道是哪个项目/哪次会话” |
-| 音效 | 2 个作者 wav + Windows 20 个；默认 chimes/error | 8 个电子/极简合成短音（正弦/方波/加法铃），四组各自默认 | 系统音效彼此太像，原声采样不符合口味；合成音可控、可改、体积小 |
+| 音效 | 2 个作者 wav + Windows 20 个；默认 chimes/error | 8 个柔和合成音（铃/木琴/卡林巴/水滴 + 房间混响），四组各自默认 | 用户觉得电子短音太生硬；按苹果/华为那种软起音、木质/玻璃听感重做 |
 | 选择入口 | 设置 → 通知 | 插件 → dsh-bing → 内联配置区（plugins.bundle.config，key dsh-bing） | 用户明确要在插件页里调；这是 plugin-manager 给组合包自带配置的官方 slot |
 | 提问来源 | 自 fold tool/call + ptc，另加宿主瀑布 | 官方 userQuestions 投影 + 宿主队列只补 plan-review | 少一个来源；也不会把 continued 的提问误清掉 |
 | 试听 | 发一条测试 toast | 专用 /preview 路由，只播声音不弹通知 | 调音效时不该刷屏通知中心 |
@@ -332,10 +332,10 @@ localStorage key：dsh-bing.v1
       enabled: true,
       soundEnabled: true,
       sounds: {
-        finished: 'builtin:pulse',
+        finished: 'builtin:aurora',
         error: 'builtin:low',
-        attention: 'builtin:tick',
-        reminder: 'builtin:arc'
+        attention: 'builtin:glass',
+        reminder: 'builtin:bloom'
       },
       notifyCompleted: true,
       notifyError: true,
@@ -391,33 +391,33 @@ localStorage key：dsh-bing.v1
 
 ### 8.1 为什么是程序生成
 
-- 音色方向：电子 / 极简。只有正弦、方波和加法合成铃，短尾，无混响、无采样；最长 0.72 秒。
+- 音色方向：柔和、接近手机系统提示音。软起音、铃/木琴/卡林巴/水滴、少量房间混响；不再用方波警报和硬点击；最长 1.9 秒。
 - 授权干净：输出由本仓库脚本生成，MIT 发布，不依赖第三方音频库。
 - 可修改：用户嫌哪个难听，改配方重新生成即可，不需要找替代文件。
 - 可复现：固定算法与采样率、每个音效自己的峰值目标；--check 会重新合成并与已提交文件逐字节比较。
-- 体积小：8 个 wav 合计约 0.3MB，不需要运行时解码器。
+- 体积小：8 个 wav 合计约 0.9MB，不需要运行时解码器。
 
 ### 8.2 目录
 
 | id | 文件 | 名称 | 场景 | 时长 | 峰值 | RMS | 合成思路 |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| builtin:pulse | 01-pulse.wav | 脉冲 | 完成 | 0.34s | 0.55 | 0.155 | C6→G5 下滑正弦 + 2 次谐波 |
-| builtin:blip | 02-blip.wav | 双点 | 完成 | 0.30s | 0.55 | 0.146 | E6 + G6 两下短音 |
-| builtin:tick | 03-tick.wav | 轻点 | 等待 | 0.16s | 0.95 | 0.162 | G6→F6 极短高频点 |
-| builtin:scan | 04-scan.wav | 扫描 | 等待 | 0.36s | 0.45 | 0.162 | C5→C6 上滑 |
-| builtin:low | 05-low.wav | 低频 | 出错 | 0.60s | 0.55 | 0.162 | A2→E2 低频 + 2 次谐波 |
-| builtin:error | 06-error.wav | 下行双音 | 出错 | 0.52s | 0.45 | 0.166 | A4→E4 两段方波，低通 |
-| builtin:arc | 07-arc.wav | 弧线 | 催办 | 0.50s | 0.60 | 0.145 | C6-E6-G6 三音琶音 |
-| builtin:chime | 08-chime.wav | 金属铃 | 完成 | 0.72s | 0.60 | 0.163 | G6 加法合成铃，短尾 |
+| builtin:aurora | 01-aurora.wav | 极光 | 完成 | 1.8s | 0.61 | 0.130 | C5-E5-G5 加法铃 + 房间混响 |
+| builtin:marimba | 02-marimba.wav | 木琴 | 完成 | 1.3s | 0.69 | 0.130 | C5-E5-G5 木质三连音 |
+| builtin:kalimba | 03-kalimba.wav | 卡林巴 | 完成 | 1.1s | 0.48 | 0.130 | G5-C6-E6 拇指琴 |
+| builtin:glass | 04-glass.wav | 玻璃 | 等待 | 1.5s | 0.55 | 0.120 | E6-G6-B6 玻璃铃，低通 |
+| builtin:bubble | 05-bubble.wav | 气泡 | 等待 | 0.8s | 0.77 | 0.120 | 两声水泡 + 小混响 |
+| builtin:low | 06-low.wav | 低音 | 出错 | 1.0s | 0.55 | 0.120 | A3-C4 低频木琴 |
+| builtin:descend | 07-descend.wav | 回声 | 出错 | 1.3s | 0.48 | 0.120 | E5→C5 柔和下行 + 混响 |
+| builtin:bloom | 08-bloom.wav | 花开 | 催办 | 1.9s | 0.45 | 0.120 | C-E-G 铺底 + 上行铃 |
 
-响度校准按 RMS 而不是只看峰值：极短的 tick 峰值 0.95，但 RMS 与其它音效一致；目标统一在 RMS 0.145–0.166，避免“完成音很轻、出错音很响”。全部 44.1kHz / 单声道 / 16-bit PCM，首尾 2ms/30ms 淡入淡出。
+响度校准按 RMS 而不是只看峰值：目标 RMS 0.12–0.13，峰值封顶 0.95；短音（气泡）靠峰值补偿，长音（花开）靠 RMS 保持不吵。全部 44.1kHz / 单声道 / 16-bit PCM，首尾 3ms/80ms 淡入淡出。
 
 ### 8.3 生成脚本契约
 
     node scripts/generate-sounds.mjs            # 重新生成全部
     node scripts/generate-sounds.mjs --check    # 校验已提交文件
 
---check 检查：存在、PCM format=1、单声道、44.1k、16-bit、时长与 catalog 相差 < 0.05s、峰值在目标 ±0.05、RMS 非静音，并重新合成一次与已提交文件逐字节比较（可复现）。npm run check 会先跑它。
+--check 检查：存在、PCM format=1、单声道、44.1k、16-bit、时长与 catalog 相差 < 0.05s、RMS 在目标 ±0.025、峰值不超过 0.96，并重新合成一次与已提交文件逐字节比较（可复现）。npm run check 会先跑它。
 
 ### 8.4 用户扩展
 
@@ -455,7 +455,7 @@ localStorage key：dsh-bing.v1
 - routes：用 fake ctx 注册后测 13 条路由、method/header、sound-library、debug；不启动真实 HTTP。
 - sounds：8 个内置 id 可解析、静音/未知回落、路径穿越被拒。
 
-当前 `npm test` 共 35 个用例，全部通过。
+当前 `npm test` 共 36 个用例，全部通过。
 
 ### 10.2 手工验收清单
 
@@ -483,7 +483,7 @@ localStorage key：dsh-bing.v1
 
 ## 12. 开放问题（需要拍板）
 
-已定：名字 dsh-bing；音色方向电子/极简。配方仍可继续微调。
+已定：名字 dsh-bing；音色方向柔和/手机系统提示音。配方仍可继续微调。
 
 1. 是否要“轻/标准”两档音量：需要宿主对 wav 做增益并缓存，成本约半天。
 2. 通知正文是否要带耗时/文件数/Token：会增加 projection 字段与正文长度，v1 先不做。

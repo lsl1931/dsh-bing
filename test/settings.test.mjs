@@ -13,7 +13,7 @@ function memory() {
 }
 
 test('defaults are complete', () => {
-  assert.equal(settings.DEFAULT_SETTINGS.sounds.finished, 'builtin:pulse')
+  assert.equal(settings.DEFAULT_SETTINGS.sounds.finished, 'builtin:aurora')
   assert.equal(settings.DEFAULT_SETTINGS.notifyAborted, false)
 })
 
@@ -24,8 +24,16 @@ test('bad JSON and unknown sounds fall back', () => {
   const store = memory()
   store.setItem(settings.PERSIST_KEY, JSON.stringify({ sounds: { finished: 'bogus', error: 'custom:ok.wav' } }))
   const read = settings.readSettings(store)
-  assert.equal(read.sounds.finished, 'builtin:pulse')
+  assert.equal(read.sounds.finished, 'builtin:aurora')
   assert.equal(read.sounds.error, 'custom:ok.wav')
+})
+
+test('v1 preferences keep their switches but move to the new sound pack', () => {
+  const storage = memory()
+  storage.setItem('dsh-bing.v1', JSON.stringify({ enabled: false, sounds: { finished: 'builtin:pulse' } }))
+  const read = settings.readSettings(storage)
+  assert.equal(read.enabled, false)
+  assert.equal(read.sounds.finished, 'builtin:aurora')
 })
 
 test('update clamps minutes and persists', () => {

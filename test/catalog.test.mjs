@@ -32,8 +32,8 @@ test('every catalog sound exists and is a playable wav', () => {
     assert.equal(stats.sampleRate, 44100, entry.file + ' is not 44.1k')
     assert.equal(stats.bits, 16, entry.file + ' is not 16-bit')
     assert.ok(Math.abs(stats.seconds - entry.seconds) < 0.05, entry.file + ' duration drifted')
-    const targetPeak = entry.peak ?? 0.8
-    assert.ok(Math.abs(stats.peak - targetPeak) <= 0.05, entry.file + ' peak ' + stats.peak + ' != target ' + targetPeak)
-    assert.ok(stats.rms > 0.02, entry.file + ' is effectively silent')
+    const targetRms = entry.rms ?? 0.13
+    assert.ok(Math.abs(stats.rms - targetRms) <= 0.025, entry.file + ' rms ' + stats.rms + ' != target ' + targetRms)
+    assert.ok(stats.peak <= 0.96, entry.file + ' peak over the cap: ' + stats.peak)
   }
 })
