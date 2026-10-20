@@ -115,6 +115,7 @@ export function readWavStats(path) {
     seconds: header.seconds,
     peak,
     rms: count === 0 ? 0 : Math.sqrt(sum / count),
+    format: header.format,
     channels: header.channels,
     sampleRate: header.sampleRate,
     bits: header.bits,

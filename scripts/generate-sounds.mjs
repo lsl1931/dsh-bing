@@ -12,10 +12,10 @@
 // Usage:
 //   node scripts/generate-sounds.mjs            write sounds/*.wav
 //   node scripts/generate-sounds.mjs --check    validate the committed files
-import { mkdirSync, readFileSync, existsSync } from 'node:fs'
+import { mkdirSync, readFileSync, existsSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { writeWav, readWavStats } from './lib/wav.mjs'
+import { encodeWav, readWavStats } from './lib/wav.mjs'
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)))
 const catalogPath = join(root, 'sounds', 'catalog.json')
@@ -252,19 +252,28 @@ const RECIPES = {
   },
 }
 
+/**
+ * Render one catalog entry to the exact bytes the repository should hold.
+ * @param {object} entry - one catalog row.
+ * @returns {Buffer} the WAV bytes.
+ */
+function render(entry) {
+  const recipe = RECIPES[entry.id]
+  if (recipe === undefined) throw new Error('no recipe for ' + entry.id)
+  const out = new Float64Array(Math.round(entry.seconds * SAMPLE_RATE))
+  recipe(out)
+  addReverb(out)
+  finish(out, entry.peak ?? TARGET_PEAK)
+  return encodeWav(out, SAMPLE_RATE)
+}
+
 function generate() {
   const outDir = join(root, 'sounds')
   mkdirSync(outDir, { recursive: true })
   const rows = []
   for (const entry of catalog.sounds) {
-    const recipe = RECIPES[entry.id]
-    if (recipe === undefined) throw new Error('no recipe for ' + entry.id)
-    const out = new Float64Array(Math.round(entry.seconds * SAMPLE_RATE))
-    recipe(out)
-    addReverb(out)
-    finish(out, entry.peak ?? TARGET_PEAK)
     const path = join(outDir, entry.file)
-    writeWav(path, out, SAMPLE_RATE)
+    writeFileSync(path, render(entry))
     const stats = readWavStats(path)
     rows.push({ id: entry.id, file: entry.file, seconds: stats.seconds, peak: stats.peak, rms: stats.rms })
   }
@@ -283,12 +292,14 @@ function check() {
     }
     const stats = readWavStats(path)
     const problems = []
+    if (stats.format !== 1) problems.push('format=' + stats.format)
     if (stats.channels !== 1) problems.push('channels=' + stats.channels)
     if (stats.sampleRate !== SAMPLE_RATE) problems.push('sampleRate=' + stats.sampleRate)
     if (stats.bits !== 16) problems.push('bits=' + stats.bits)
     if (Math.abs(stats.seconds - entry.seconds) > 0.05) problems.push('seconds=' + stats.seconds.toFixed(3))
     const targetPeak = entry.peak ?? TARGET_PEAK
     if (stats.peak < targetPeak - 0.05 || stats.peak > targetPeak + 0.05) problems.push('peak=' + stats.peak.toFixed(3) + ' target=' + targetPeak)
+    if (!render(entry).equals(readFileSync(path))) problems.push('bytes differ from regenerated output')
     if (problems.length > 0) failed += 1
     rows.push({ id: entry.id, file: entry.file, seconds: stats.seconds, peak: stats.peak, problems })
   }

@@ -27,6 +27,7 @@ test('every catalog sound exists and is a playable wav', () => {
     const path = join(root, 'sounds', entry.file)
     assert.equal(existsSync(path), true, 'missing ' + entry.file)
     const stats = readWavStats(path)
+    assert.equal(stats.format, 1, entry.file + ' is not PCM')
     assert.equal(stats.channels, 1, entry.file + ' is not mono')
     assert.equal(stats.sampleRate, 44100, entry.file + ' is not 44.1k')
     assert.equal(stats.bits, 16, entry.file + ' is not 16-bit')
