@@ -23,7 +23,7 @@ These come from the reference implementation's field notes and are load-bearing 
 - The projection fold must return the SAME state reference for events it does not handle; the registry gates change notifications on Object.is.
 - Client-visible routes are outside /api, so each handler owns its method + same-origin header check.
 - Service-level asks (plan review) never reach the session log; observe user-questions/request with { global: true } on the host and poll from the client.
-- Logged asks already have a client-visible projection: userQuestions (active[{callId,questions,state:open|continued}] + settled). Read it; do not fold ask_user_question again, and treat a continued ask as still waiting.
+- Logged asks already have a client-visible projection: userQuestions (active[{callId,questions,state:open|continued}] + settled). Read it; do not fold ask_user_question again, and treat a continued ask as still waiting. If a Session has no userQuestions projection, fall back to the host /questions queue for all its asks.
 - The host toast click path is only dsh://open. It raises the window; it cannot jump to a Session. Do not promise a jump in UI or docs.
 - Projection definitions must set stateVersion, and the wire view must be cached in state: the registry compares views with Object.is, so a fresh object per apply re-notifies every client on every event.
 - SAFE_SOUND_NAME must reject '.' and '..' segments explicitly, not only separators.

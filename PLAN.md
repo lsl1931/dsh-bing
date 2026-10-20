@@ -209,7 +209,7 @@ definition 必须显式给 stateVersion（registry 会校验 Number.isSafeIntege
 | /delete-sound | POST | {id} | {ok} | 只删 custom: |
 | /sound-cache | GET/POST | - | {files,bytes} | 转码缓存统计/清理 |
 | /pick-file | POST | - | {path} | Windows 文件选择框（STA 子进程） |
-| /questions | GET | - | {seq, items} | 只补 userQuestions 投影之外的 plan-review |
+| /questions | GET | - | {seq, items} | 补 plan-review；无 userQuestions 的会话回退为全部提问 |
 | /report | POST | 一行文本 | 204 | 客户端诊断环 |
 | /debug | GET | - | JSON | 投影状态 + 媒体状态 + 最近报告 |
 
@@ -319,6 +319,7 @@ definition 必须显式给 stateVersion（registry 会校验 Number.isSafeIntege
 - approval：来自 notifyPlus.pending，requestId 首次出现才通知；新鲜度用 pending.at（approval/asked 的 event.time），不要用 endedAt。
 - question：来自官方 userQuestions.active。callId 首次出现才通知；state === 'continued' 仍算等待，不重复弹；从 active 消失或进 settled 就结束等待。没有时间戳，首次观察时间就是 firstSeenAt。
 - plan-review：来自宿主 /questions，只处理 userQuestions 里没有同 callId 的条目；有 callId 用 callId 去重，没有再用 summary 前 40 字符做 5 秒 twin key。
+- 回退：某会话没有 userQuestions 投影（服务未启用/旧版本）时，/questions 队列接管该会话的所有提问（question + plan-review），否则会漏报。
 - 去重窗口：3 秒，key = sessionId + ':turn:' + turn / ':request:' + requestId / ':ask:' + callId。
 - 焦点：document.hasFocus() || hostFocused || 5 秒内有过 focus，任一成立就静默。
 - connection/reset 时清空所有基线，避免重连后补通知。
