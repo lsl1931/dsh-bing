@@ -1,6 +1,6 @@
 # dsh-bing 实现规划
 
-- 状态：设计稿 v0.2（2026-10-19，名字与音色方向已定）
+- 状态：v0.3（2026-10-19，M1–M4 已实现；M5 手工验收待做）
 - 目标运行时：DSH 桌面端 0.2.1-rc.2（Windows profile desktop）
 - 名字：dsh-bing（会话结束时 bing 一下），对应电子/极简的音色与交互方向
 - 参考实现：dsh-notify-desktop 0.1.1（MIT）
@@ -99,26 +99,25 @@
     dsh-bing/
       package.json            包元数据、dsh.client.inject、脚本
       cordis.patch.yml        把宿主半挂到 Loader
-      build.mjs               复制宿主半 + 包装客户端半（零依赖）
+      build.mjs               复制宿主半到 lib/ + 把客户端 CJS 模块打成单文件
       src/
-        index.js              宿主入口：注册 projection + routes（M1）
+        index.js              宿主入口：projection + 13 条路由 + Toast/音频
         shared/
           protocol.js         路由、header、投影 key、上限常量
-          schema.js           手写 parse 兼容 schema（M1）
-          sounds.js           音效目录解析、id 校验、路径白名单（M1）
+          schema.js           手写 parse 兼容 schema
+          projection.js       turn/end + approval 折叠，wire view 缓存
+          sounds.js           音效目录、导入/删除、wav 缓存、ffmpeg
         client/
-          index.js            客户端入口：装配 watcher / UI
-          protocol.js         与 shared/protocol.js 对应的常量副本
-          settings.js         localStorage store + 校验 + 迁移
-          project.js          项目名解析（纯函数）
-          summary.js          Markdown 扁平化 + 长度裁剪（纯函数）
-          runner.js           边沿检测、去重、新鲜度（纯函数）
-          questions.js        归一化 userQuestions 投影与宿主 plan-review 队列
-          notifier.js         toast / focus / preview / silence / library 的 fetch 封装
-          sound-picker.js     React 音效选择器（createElement，无 JSX）
-          settings-page.js    设置 → 通知 的完整页面
-          plugins-tab.js      设置 → 插件 → 通知音效 的标签页
-          styles.js           注入 CSS，使用 DSH 设计 token
+          index.js            客户端入口：watcher / 焦点 / 催办 / slots
+          settings.cjs        localStorage store + 校验
+          project.cjs         项目名解析（纯函数）
+          summary.cjs         Markdown 扁平化 + 文案组装
+          runner.cjs          边沿检测、去重、新鲜度
+          questions.cjs       归一化 userQuestions 与宿主 plan-review 队列
+          notifier.cjs        13 条路由的 fetch 封装
+          ui.cjs              SoundPicker + 设置页 + 插件页 tab（createElement）
+          locales.cjs         zh / en 字典
+          styles.cjs          注入 CSS，使用 DSH 设计 token
       sounds/
         catalog.json          8 个内置音效的单一事实来源
         *.wav                 生成产物（提交进仓库）
@@ -128,14 +127,14 @@
         lib/wav.mjs           WAV 编解码与电平统计
       test/
         catalog.test.mjs      音效目录与水印校验
-        project.test.mjs      项目名解析用例（M2）
-        summary.test.mjs      摘要裁剪用例（M2）
-        runner.test.mjs       去重/新鲜度用例（M2）
-        questions.test.mjs    userQuestions + plan-review 归一化（M2）
-        settings.test.mjs     设置回落/迁移（M3）
-        projection.test.mjs   折叠不变量与事件夹具（M1）
-        schema.test.mjs       parse 兼容层（M1）
-        routes.test.mjs       路由 method/header/body 上限（M1）
+        sounds.test.mjs       id 解析、静音/未知回落、路径安全
+        project.test.mjs      项目名解析用例
+        summary.test.mjs      摘要裁剪与标题组装
+        runner.test.mjs       去重/新鲜度用例
+        questions.test.mjs    userQuestions + plan-review 归一化
+        settings.test.mjs     设置回落/持久化
+        projection.test.mjs   折叠不变量、wire view 缓存、schema
+        routes.test.mjs       路由注册、method/header、debug
       lib/                    构建产物，提交（profile 直接链接这里）
       README.md
       PLAN.md
@@ -447,7 +446,10 @@ localStorage key：dsh-bing.v1
 - runner：turn 前进、旧事件不通知、approval 基线、userQuestions.active 新增/continued/消失、去重窗口。
 - questions：userQuestions 与宿主 plan-review 队列的归一化与去重。
 - settings：缺字段、坏 JSON、未知音效 id 的回落。
-- routes：用 fake req/res 测 header/method/body 上限；不启动真实 HTTP。
+- routes：用 fake ctx 注册后测 13 条路由、method/header、sound-library、debug；不启动真实 HTTP。
+- sounds：8 个内置 id 可解析、静音/未知回落、路径穿越被拒。
+
+当前 `npm test` 共 34 个用例，全部通过。
 
 ### 10.2 手工验收清单
 
@@ -466,12 +468,12 @@ localStorage key：dsh-bing.v1
 
 | 阶段 | 交付 | 文件 | 验收 |
 | --- | --- | --- | --- |
-| M0（本次） | 仓库、构建、音效目录与 8 个 wav、规划 | package.json, build.mjs, sounds/, PLAN.md | npm run check 通过 |
-| M1 | 宿主：schema、projection（turn + approval）、toast/preview/silence/focus/foreground/debug/report（7 条路由） | src/index.js, src/shared/* | projection 单测；debug 路由可用 |
-| M2 | 客户端：watcher（turn + approval + userQuestions + plan-review）、项目名、文案、toast、/questions 路由 | src/client/{index,project,summary,runner,questions,notifier}.js | 真机收到带项目名的通知 |
-| M3 | 设置页 + 插件页音效选择器 | sound-picker.js, settings-page.js, plugins-tab.js, styles.js | 四组可选可试听 |
-| M4 | 自定义音效导入/删除、缓存、催办、sound-library 等 5 条路由 | routes + library UI | 导入 wav 并重启仍生效 |
-| M5 | 文档、诊断、验收记录 | README, docs/acceptance | 手工清单 10 项全过 |
+| M0（已完成） | 仓库、构建、音效目录与 8 个 wav、规划 | package.json, build.mjs, sounds/, PLAN.md | npm run check 通过 |
+| M1（已实现） | 宿主：schema、projection（turn + approval）、toast/preview/silence/focus/foreground/debug/report（7 条路由） | src/index.js, src/shared/* | projection 单测；debug 路由可用 |
+| M2（已实现） | 客户端：watcher（turn + approval + userQuestions + plan-review）、项目名、文案、toast、/questions 路由 | src/client/{index,project,summary,runner,questions,notifier}.cjs | 真机收到带项目名的通知 |
+| M3（已实现） | 设置页 + 插件页音效选择器 | ui.cjs, styles.cjs, locales.cjs | 四组可选可试听 |
+| M4（已实现） | 自定义音效导入/删除、缓存、催办、sound-library 等 5 条路由 | routes + library UI | 导入 wav 并重启仍生效 |
+| M5（待做） | 手工验收记录、README 截图/诊断 | README, docs/acceptance | 手工清单 10 项全过 |
 
 ## 12. 开放问题（需要拍板）
 

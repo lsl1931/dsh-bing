@@ -4,7 +4,7 @@ These rules apply to every file in this repository. Read them before changing co
 
 ## Hard constraints
 
-- **Zero runtime dependencies.** The host half is plain ESM; the client half is a raw CJS body wrapped by build.mjs. Do not add TypeScript, JSX, zod, rolldown, or a bundler.
+- **Zero runtime dependencies.** The host half is plain ESM; the client half is a set of raw CJS modules bundled by build.mjs (no transpiler). Do not add TypeScript, JSX, zod, rolldown, or an external bundler.
 - **Never modify the DSH installation or profile config from this repository.** Installation is a user-run link command documented in README.
 - **lib/ is committed.** A profile links this directory, so the built host and client files must always match src/.
 - **Sounds are generated, not hand-edited.** Change the recipe in scripts/generate-sounds.mjs, run npm run sounds, and commit the wavs. npm run sounds:check must pass.
@@ -30,9 +30,9 @@ These come from the reference implementation's field notes and are load-bearing 
 
 ## Architecture boundaries
 
-- Host: src/index.js + src/shared/*. It owns the projection, routes, toast, and audio.
-- Client: src/client/*. It owns the session watcher, copy, settings, and UI. It never spawns processes and never receives a filesystem path from the host.
-- Shared wire constants live in src/shared/protocol.js and are duplicated in src/client/protocol.js because the client bundle is CJS. Keep them identical; a test should compare them once both exist.
+- Host: src/index.js + src/shared/* (schema, projection, sounds). build.mjs copies the host entry and src/shared to lib/; the runtime never imports from src/.
+- Client: src/client/*.cjs plus the index.js entry. build.mjs bundles the local modules into lib/client.js; local requires must use exact './name.cjs' ids. It never spawns processes and never receives a filesystem path from the host.
+- Wire constants are duplicated in src/client/notifier.cjs because the browser bundle cannot import the host's ESM protocol module. Keep the routes and header identical; test/routes.test.mjs checks the host side.
 
 ## UI rules
 

@@ -1,6 +1,6 @@
 {
   "name": "dsh-bing",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "DSH desktop notifications that name the project, with an electronic bing and a minimal, selectable sound pack.",
   "type": "module",
   "main": "lib/index.js",

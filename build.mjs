@@ -1,35 +1,59 @@
-// Build dsh-bing (zero dependency).
+// Build dsh-bing with no dependencies.
 //
-// - lib/index.js  : the Node half, copied verbatim from src/index.js.
-// - lib/client.js : the browser half wrapped in the factory-form CJS the DSH
-//   client-modules system registers (window.__ModuleLoader__.load({id,factory})).
-//
-// The client source is JSX-free and already exports inject/apply, so no
-// transpiler is needed. lib/ is committed on purpose: a profile links this
-// directory, so the built files ship with the source.
-import { mkdirSync, writeFileSync, copyFileSync, readFileSync } from 'node:fs'
+// - lib/index.js + lib/shared/*.js : the Node half, copied verbatim.
+// - lib/client.js : the browser half, with its local CJS modules bundled into
+//   one window.__ModuleLoader__.load() factory. External requires (react) still
+//   go to the shell's require.
+import { mkdirSync, readdirSync, readFileSync, writeFileSync, copyFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const root = dirname(fileURLToPath(import.meta.url))
 const libDir = join(root, 'lib')
-mkdirSync(libDir, { recursive: true })
+mkdirSync(join(libDir, 'shared'), { recursive: true })
 
 copyFileSync(join(root, 'src', 'index.js'), join(libDir, 'index.js'))
-console.log('lib/index.js written')
+for (const file of readdirSync(join(root, 'src', 'shared'))) {
+  if (file.endsWith('.js')) copyFileSync(join(root, 'src', 'shared', file), join(libDir, 'shared', file))
+}
+console.log('lib/index.js and lib/shared written')
 
-const body = readFileSync(join(root, 'src', 'client', 'index.js'), 'utf8')
+const clientDir = join(root, 'src', 'client')
+const modules = readdirSync(clientDir)
+  .filter(file => file.endsWith('.js') || file.endsWith('.cjs'))
+  .sort()
+
+const factories = modules.map(file => {
+  const source = readFileSync(join(clientDir, file), 'utf8')
+  return [
+    '\t__modules[' + JSON.stringify('./' + file) + '] = function (module, exports, require) {',
+    source,
+    '\t};',
+  ].join('\n')
+})
+
 const wrapped = [
   'window.__ModuleLoader__.load({',
   '\tid: "dsh-bing",',
   '\tfactory: (require) => {',
-  '\t\tvar module = { exports: {} };',
-  '\t\tvar exports = module.exports;',
-  body,
-  '\t\treturn module.exports;',
+  '\t\tvar __modules = {};',
+  '\t\tvar __cache = {};',
+  '\t\tfunction __localRequire(id) {',
+  '\t\t\tif (__cache[id]) return __cache[id].exports;',
+  '\t\t\tvar factory = __modules[id];',
+  '\t\t\tif (!factory) throw new Error("dsh-bing: local module not found: " + id);',
+  '\t\t\tvar module = { exports: {} };',
+  '\t\t\t__cache[id] = module;',
+  '\t\t\tfactory(module, module.exports, function (name) {',
+  '\t\t\t\treturn name.charAt(0) === "." ? __localRequire(name) : require(name);',
+  '\t\t\t});',
+  '\t\t\treturn module.exports;',
+  '\t\t}',
+  ...factories,
+  '\t\treturn __localRequire("./index.js");',
   '\t}',
   '});',
   '',
 ].join('\n')
 writeFileSync(join(libDir, 'client.js'), wrapped)
-console.log('lib/client.js written')
+console.log('lib/client.js written (' + String(modules.length) + ' modules)')
