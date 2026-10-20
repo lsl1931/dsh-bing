@@ -1,4 +1,4 @@
-// dsh-notify-plus client half.
+// dsh-pulse client half.
 //
 // This file is a raw CJS body. build.mjs wraps it in the factory form the DSH
 // client-modules system registers (window.__ModuleLoader__.load). Do not add

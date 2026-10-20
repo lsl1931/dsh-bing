@@ -1,7 +1,8 @@
-# dsh-notify-plus 实现规划
+# dsh-pulse 实现规划
 
-- 状态：设计稿 v0.1（2026-10-19）
+- 状态：设计稿 v0.2（2026-10-19，名字与音色方向已定）
 - 目标运行时：DSH 桌面端 0.2.1-rc.2（Windows profile desktop）
+- 名字：dsh-pulse（脉冲），对应电子/极简的音色与交互方向
 - 参考实现：dsh-notify-desktop 0.1.1（MIT）
 - 本文回答一个问题：**接下来写代码时，每个文件负责什么、数据从哪来、失败时怎么办。**
 
@@ -11,7 +12,7 @@
 
 1. 会话结束、出错、或停下来等人时弹 Windows 原生通知，**标题一定带项目名**。
 2. 通知正文带**会话标题**（这一次对话是哪一条）和结果摘要，不让用户猜。
-3. 内置一组耐听、可区分的提示音（8 个），四类场景各自可选，**每个都能当场试听**。
+3. 内置一组**电子、极简、短促**的提示音（8 个，最长 0.72 秒），四类场景各自可选，**每个都能当场试听**。
 4. 音效选择放在两个地方：设置 → 插件（内置插件页）→ 「通知音效」标签页（主入口），以及设置 → 通知（完整设置页）。
 5. 支持导入自己的音效文件；导入后出现在选择器里，可预览、可删除。
 6. 窗口有焦点时不打扰；点通知把 DSH 窗口拉回前台；切回窗口或关掉提示音时，正在响的声音立刻停。
@@ -47,17 +48,17 @@
 
 ## 3. 与原插件的差异（设计决定）
 
-| 维度 | dsh-notify-desktop 0.1.1 | dsh-notify-plus（本仓库） | 理由 |
+| 维度 | dsh-notify-desktop 0.1.1 | dsh-pulse（本仓库） | 理由 |
 | --- | --- | --- | --- |
 | 标题 | workspaceName(cwd) || displayTitle | 项目名解析链：重命名过的工作区标题 → cwd basename → 真实会话标题 → DSH | 默认分区标题对所有会话都一样；未重命名工作区按 cwd 区分，重命名后才用工作区标题 |
 | 正文 | 回复摘要；没有会话标题 | 会话标题 + 摘要（最多两行 body text，摘要限 42 字符） | 用户明确抱怨“不知道是哪个项目/哪次会话” |
-| 音效 | 2 个作者 wav + Windows 20 个；默认 chimes/error | 8 个程序生成的内置音效；四组各自默认 | 系统音效彼此太像，作者音效主观难听；生成式音效可控、可改 |
+| 音效 | 2 个作者 wav + Windows 20 个；默认 chimes/error | 8 个电子/极简合成短音（正弦/方波/加法铃），四组各自默认 | 系统音效彼此太像，原声采样不符合口味；合成音可控、可改、体积小 |
 | 选择入口 | 设置 → 通知 | 设置 → 插件 → 通知音效（settings.plugins.tab）+ 设置 → 通知 | 用户希望“在插件目录这边”就能调；顶层插件管理器页没有公开插槽，只能用设置里的插件页 |
 | 提问来源 | 自 fold tool/call + ptc，另加宿主瀑布 | 官方 userQuestions 投影 + 宿主队列只补 plan-review | 少一个来源；也不会把 continued 的提问误清掉 |
 | 试听 | 发一条测试 toast | 专用 /preview 路由，只播声音不弹通知 | 调音效时不该刷屏通知中心 |
 | 依赖 | TypeScript + zod + rolldown，宿主 bundle 210KB | 纯 JS、零依赖、build.mjs 只做包装 | 与本地现有插件一致，链接安装即可，不需要构建工具链 |
 | schema | zod | 手写 parse 兼容层 | registry 只用 parse；少一个 200KB 依赖 |
-| 声音目录 | 插件 sounds/ + %LOCALAPPDATA%\dsh-notify\custom | 相同模式，目录改为 dsh-notify-plus | 用户可自由扩展，不改代码 |
+| 声音目录 | 插件 sounds/ + %LOCALAPPDATA%\dsh-notify\custom | 相同模式，目录改为 dsh-pulse | 用户可自由扩展，不改代码 |
 
 ## 4. 架构与数据流
 
@@ -65,7 +66,7 @@
 
     session/event
         │
-        ├──► host: notifyPlus projection（turn/end + approvals，纯 fold）
+        ├──► host: pulse projection（turn/end + approvals，纯 fold）
         │         │ wire: turn / reason / body / endedAt / pending[{approval,at}] / updatedAt
         │         ▼
         ├──► host: official userQuestions projection（open / continued / settled）
@@ -74,7 +75,7 @@
         └──► host: question watcher（只补 plan-review 服务级提问）
                   │ /questions 轮询
                   ▼
-    client: sessions.list 的 projectionValues（notifyPlus + userQuestions）
+    client: sessions.list 的 projectionValues（pulse + userQuestions）
         │
         ├── 判定：turn 前进？approval 新增？userQuestions.active 新增？新鲜？去重？有焦点？
         │
@@ -82,7 +83,7 @@
         ├── 组装文案（项目 · 状态 / 会话标题 / 摘要）
         │
         ▼
-    POST /dsh-notify-plus/toast ──► PowerShell：ToastNotification + SoundPlayer
+    POST /dsh-pulse/toast ──► PowerShell：ToastNotification + SoundPlayer
         ▲
         │
     client: settings store（localStorage）◄── 设置页 / 插件页的选择器
@@ -95,7 +96,7 @@
 
 ## 5. 目录结构
 
-    dsh-notify-plus/
+    dsh-pulse/
       package.json            包元数据、dsh.client.inject、脚本
       cordis.patch.yml        把宿主半挂到 Loader
       build.mjs               复制宿主半 + 包装客户端半（零依赖）
@@ -143,18 +144,18 @@
 
 ### 6.1 入口
 
-    export const name = 'dsh-notify-plus'
+    export const name = 'dsh-pulse'
     export const inject = ['sessionProjections']
 
     export function apply(ctx) {
-      ctx.sessionProjections.register(notifyPlusProjection())
+      ctx.sessionProjections.register(pulseProjection())
       ctx.inject(['webServer'], scoped => { …注册 exact 路由（总计 13：M1 7、M2 1、M4 5）… })
     }
 
 - 只依赖 sessionProjections；webServer 用 inject 子作用域，缺失时投影仍然工作（客户端会退回渲染层通知）。
 - 所有 ctx.effect 都要有唯一 label，便于诊断。
 
-### 6.2 notifyPlus projection
+### 6.2 pulse projection
 
 状态（会进 checkpoint，必须可 JSON 序列化）：
 
@@ -195,7 +196,7 @@ definition 必须显式给 stateVersion（registry 会校验 Number.isSafeIntege
 
 ### 6.3 路由
 
-统一前缀 /dsh-notify-plus，全部 same-origin header 校验；POST 才接受写操作；body 上限 8KB。
+统一前缀 /dsh-pulse，全部 same-origin header 校验；POST 才接受写操作；body 上限 8KB。
 
 | 路由 | 方法 | 请求 | 响应 | 用途 |
 | --- | --- | --- | --- | --- |
@@ -235,7 +236,7 @@ definition 必须显式给 stateVersion（registry 会校验 Number.isSafeIntege
     resolveSound(id) -> { event?: string, wav?: string, silent?: boolean }
 
 - builtin:<name>：只接受 catalog.json 里存在的 id，文件路径 = 插件 sounds/<file>。
-- custom:<file>：只接受 SAFE_SOUND_NAME（无路径分隔符、拒绝 '..' 片段），路径 = %LOCALAPPDATA%\dsh-notify-plus\custom\<file>。
+- custom:<file>：只接受 SAFE_SOUND_NAME（无路径分隔符、拒绝 '..' 片段），路径 = %LOCALAPPDATA%\dsh-pulse\custom\<file>。
 - system:<key>：映射到 Windows 系统事件或 %SystemRoot%\Media 下的 wav（白名单）。
 - silent：不播。
 - 任何未知 id 回落到默认事件，不抛错。
@@ -264,7 +265,7 @@ definition 必须显式给 stateVersion（registry 会校验 Number.isSafeIntege
 
 - sessions：session list（byId / ids / projectionValues，含官方 userQuestions）。
 - slots：settings.section 与 settings.plugins.tab。
-- locale：注册 notify-plus 命名空间。
+- locale：注册 pulse 命名空间。
 - workspaces 用 ctx.get('workspaces') **可选读取**，不要放进 inject：它只用于项目名富化，缺了也必须照常通知。
 - uiWorkspace 同样可选：v1 点通知只 focus 窗口，不调用 openSession；以后壳支持跳会话时再启用。
 - 依赖加载顺序写在 package.json 的 dsh.client.inject（sessions 控制器、settings、locale、workspace），这不是硬 inject。
@@ -316,7 +317,7 @@ definition 必须显式给 stateVersion（registry 会校验 Number.isSafeIntege
 
 - turn 前进：previousTurn !== undefined && turn > previousTurn。
 - turn 新鲜度：projection.endedAt 与 now 相差 <= 60 秒；启动时折叠补上的旧轮次不通知。
-- approval：来自 notifyPlus.pending，requestId 首次出现才通知；新鲜度用 pending.at（approval/asked 的 event.time），不要用 endedAt。
+- approval：来自 pulse.pending，requestId 首次出现才通知；新鲜度用 pending.at（approval/asked 的 event.time），不要用 endedAt。
 - question：来自官方 userQuestions.active。callId 首次出现才通知；state === 'continued' 仍算等待，不重复弹；从 active 消失或进 settled 就结束等待。没有时间戳，首次观察时间就是 firstSeenAt。
 - plan-review：来自宿主 /questions，只处理 userQuestions 里没有同 callId 的条目；有 callId 用 callId 去重，没有再用 summary 前 40 字符做 5 秒 twin key。
 - 回退：某会话没有 userQuestions 投影（服务未启用/旧版本）时，/questions 队列接管该会话的所有提问（question + plan-review），否则会漏报。
@@ -326,16 +327,16 @@ definition 必须显式给 stateVersion（registry 会校验 Number.isSafeIntege
 
 ### 7.5 设置
 
-localStorage key：dsh-notify-plus.v1
+localStorage key：dsh-pulse.v1
 
     {
       enabled: true,
       soundEnabled: true,
       sounds: {
-        finished: 'builtin:crystal',
-        error: 'builtin:low-bell',
-        attention: 'builtin:woodblock',
-        reminder: 'builtin:glass'
+        finished: 'builtin:pulse',
+        error: 'builtin:low',
+        attention: 'builtin:tick',
+        reminder: 'builtin:arc'
       },
       notifyCompleted: true,
       notifyError: true,
@@ -365,9 +366,9 @@ localStorage key：dsh-notify-plus.v1
 
 ### 7.7 两个挂载点
 
-1. 设置 → 通知（settings.section，id: notify-plus，order 60）
+1. 设置 → 通知（settings.section，id: pulse，order 60）
    - 总开关、提示音开关、四类结束状态、三类等待、催办分钟数、测试按钮、自定义音效管理、诊断入口。
-2. 设置 → 插件（内置插件页）→ 通知音效（settings.plugins.tab，id: notify-plus-sounds，order 90）
+2. 设置 → 插件（内置插件页）→ 通知音效（settings.plugins.tab，id: pulse-sounds，order 90）
    - 四个场景选择器 + 试听 + 导入按钮 + “打开完整设置”链接。
    - 两个挂载点都用 ctx.slots.inject(<slotName>, () => ctx.slots.register(...)) 包一层，等插槽声明就绪再注册；直接 register 会在壳还没声明插槽时被丢弃。
    - 可行性已在 0.2.1-rc.2 的 dsh-client-ui-settings-plugins 中确认：settings.plugins.tab 是 kind: list, scope: root 的列表插槽，第三方客户端插件可以注册（inventory 自己就注册了 id: all）。
@@ -376,7 +377,7 @@ localStorage key：dsh-notify-plus.v1
 
 ### 7.8 样式
 
-- 只注入一个 <style data-plugin="dsh-notify-plus">，id 固定，重复加载不重复插入。
+- 只注入一个 <style data-plugin="dsh-pulse">，id 固定，重复加载不重复插入。
 - 颜色/边框/圆角全部用 var(--dsw-alias-…)，不写死浅色/深色。
 - 选择器面板最大高度 320px，超出滚动；不改变页面布局宽度。
 - 移动端不是目标，但窄窗口下四列会换行。
@@ -385,25 +386,26 @@ localStorage key：dsh-notify-plus.v1
 
 ### 8.1 为什么是程序生成
 
+- 音色方向：电子 / 极简。只有正弦、方波和加法合成铃，短尾，无混响、无采样；最长 0.72 秒。
 - 授权干净：输出由本仓库脚本生成，MIT 发布，不依赖第三方音频库。
 - 可修改：用户嫌哪个难听，改配方重新生成即可，不需要找替代文件。
-- 可复现：固定 PRNG 种子、固定采样率、每个音效自己的峰值目标；--check 会重新合成并与已提交文件逐字节比较。
-- 体积小：8 个 wav 合计约 0.9MB，不需要运行时解码器。
+- 可复现：固定算法与采样率、每个音效自己的峰值目标；--check 会重新合成并与已提交文件逐字节比较。
+- 体积小：8 个 wav 合计约 0.3MB，不需要运行时解码器。
 
 ### 8.2 目录
 
 | id | 文件 | 名称 | 场景 | 时长 | 峰值 | RMS | 合成思路 |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| builtin:crystal | 01-crystal.wav | 水晶铃 | 完成 | 1.4s | 0.60 | 0.124 | C6 + G6 两音钟，谐波快速衰减 |
-| builtin:marimba | 02-marimba.wav | 木琴 | 完成 | 1.2s | 0.60 | 0.113 | C5-E5-G5 三连音，1/3.93/9.24 谐波 |
-| builtin:harp | 03-harp.wav | 竖琴 | 完成 | 1.5s | 0.60 | 0.117 | C5-E5-G5-C6 琶音，1/n^1.35 谐波 |
-| builtin:woodblock | 04-woodblock.wav | 木鱼 | 等待 | 0.6s | 0.90 | 0.101 | 两声短促木击，噪声 + 共振 |
-| builtin:droplet | 05-droplet.wav | 水滴 | 等待 | 0.9s | 0.90 | 0.101 | 下滑音 + 两次回声 |
-| builtin:low-bell | 06-low-bell.wav | 低音钟 | 出错 | 1.8s | 0.50 | 0.138 | A3 低钟，低通 |
-| builtin:descend | 07-descend.wav | 下行双音 | 出错 | 1.2s | 0.20 | 0.113 | A4→F4 小三度，软起落 |
-| builtin:glass | 08-glass.wav | 玻璃琶音 | 催办 | 1.4s | 0.65 | 0.138 | C6-E6-G6-C7 四音琶音 |
+| builtin:pulse | 01-pulse.wav | 脉冲 | 完成 | 0.34s | 0.55 | 0.155 | C6→G5 下滑正弦 + 2 次谐波 |
+| builtin:blip | 02-blip.wav | 双点 | 完成 | 0.30s | 0.55 | 0.146 | E6 + G6 两下短音 |
+| builtin:tick | 03-tick.wav | 轻点 | 等待 | 0.16s | 0.95 | 0.162 | G6→F6 极短高频点 |
+| builtin:scan | 04-scan.wav | 扫描 | 等待 | 0.36s | 0.45 | 0.162 | C5→C6 上滑 |
+| builtin:low | 05-low.wav | 低频 | 出错 | 0.60s | 0.55 | 0.162 | A2→E2 低频 + 2 次谐波 |
+| builtin:error | 06-error.wav | 下行双音 | 出错 | 0.52s | 0.45 | 0.166 | A4→E4 两段方波，低通 |
+| builtin:arc | 07-arc.wav | 弧线 | 催办 | 0.50s | 0.60 | 0.145 | C6-E6-G6 三音琶音 |
+| builtin:chime | 08-chime.wav | 金属铃 | 完成 | 0.72s | 0.60 | 0.163 | G6 加法合成铃，短尾 |
 
-响度校准按 RMS 而不是只用峰值：钟/琴的峰值高但很快衰减，RMS 低；持续音峰值低但 RMS 高。目标统一在 RMS 0.10–0.14，避免“完成音很轻、出错音很响”。全部 44.1kHz / 单声道 / 16-bit PCM，首尾 4ms/50ms 淡入淡出。
+响度校准按 RMS 而不是只看峰值：极短的 tick 峰值 0.95，但 RMS 与其它音效一致；目标统一在 RMS 0.145–0.166，避免“完成音很轻、出错音很响”。全部 44.1kHz / 单声道 / 16-bit PCM，首尾 2ms/30ms 淡入淡出。
 
 ### 8.3 生成脚本契约
 
@@ -415,7 +417,7 @@ localStorage key：dsh-notify-plus.v1
 ### 8.4 用户扩展
 
 - 内置音效：把 wav 丢进 sounds/，在 catalog.json 加一行，重新构建；适合开发者。
-- 自定义音效：设置页「添加音效…」，复制到 %LOCALAPPDATA%\dsh-notify-plus\custom；适合普通使用。
+- 自定义音效：设置页「添加音效…」，复制到 %LOCALAPPDATA%\dsh-pulse\custom；适合普通使用。
 - 删除只删 custom，不碰内置文件。
 
 ## 9. 兼容性与风险
@@ -458,7 +460,7 @@ localStorage key：dsh-notify-plus.v1
 7. 点通知，窗口回到前台（不跳会话；这是宿主 Toast 点击路径的限制，不是 bug）。
 8. 通知响的时候切回窗口，声音立刻停。
 9. 等待审批/提问时弹「等你确认」，10 分钟后补一条「还在等你」；提问超时后 state=continued 时不重复弹。
-10. /dsh-notify-plus/debug 能看到 projection 状态、最近报告、ffmpeg 与播放器状态。
+10. /dsh-pulse/debug 能看到 projection 状态、最近报告、ffmpeg 与播放器状态。
 
 ## 11. 里程碑
 
@@ -473,10 +475,10 @@ localStorage key：dsh-notify-plus.v1
 
 ## 12. 开放问题（需要拍板）
 
-1. 名字：dsh-notify-plus 是否合适？不喜欢可以改目录与 package name（id 只影响 Loader 与 client bundle id）。
-2. 音色口味：当前 8 个偏原声（钟/木/竖琴）。如果更喜欢电子/极简，可以换配方。
-3. 是否要“轻/标准”两档音量：需要宿主对 wav 做增益并缓存，成本约半天。
-4. 通知正文是否要带耗时/文件数/Token：会增加 projection 字段与正文长度，v1 先不做。
-5. 是否与 dsh-notify-desktop 并存：并存会出现两条通知；建议装了本插件就禁用旧的（README 写清楚）。
-6. 是否接受“设置 → 插件页”而不是截图里的顶层插件管理器页：顶层页没有公开插槽；要放那里只能改 harness。
-7. 点通知是否必须跳会话：宿主 Toast 只有 dsh://open，跳会话需要桌面壳新增带 session 参数的激活路径。
+已定：名字 dsh-pulse；音色方向电子/极简。配方仍可继续微调。
+
+1. 是否要“轻/标准”两档音量：需要宿主对 wav 做增益并缓存，成本约半天。
+2. 通知正文是否要带耗时/文件数/Token：会增加 projection 字段与正文长度，v1 先不做。
+3. 是否与 dsh-notify-desktop 并存：并存会出现两条通知；建议装了本插件就禁用旧的（README 写清楚）。
+4. 是否接受“设置 → 插件页”而不是截图里的顶层插件管理器页：顶层页没有公开插槽；要放那里只能改 harness。
+5. 点通知是否必须跳会话：宿主 Toast 只有 dsh://open，跳会话需要桌面壳新增带 session 参数的激活路径。

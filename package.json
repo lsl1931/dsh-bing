@@ -1,7 +1,7 @@
 {
-  "name": "dsh-notify-plus",
+  "name": "dsh-pulse",
   "version": "0.1.0",
-  "description": "DSH desktop notifications that name the project, with a curated and selectable sound library.",
+  "description": "DSH desktop notifications that name the project, with an electronic, minimal and selectable sound pack.",
   "type": "module",
   "main": "lib/index.js",
   "exports": {

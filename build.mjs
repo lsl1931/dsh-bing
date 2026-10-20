@@ -1,4 +1,4 @@
-// Build dsh-notify-plus (zero dependency).
+// Build dsh-pulse (zero dependency).
 //
 // - lib/index.js  : the Node half, copied verbatim from src/index.js.
 // - lib/client.js : the browser half wrapped in the factory-form CJS the DSH
@@ -21,7 +21,7 @@ console.log('lib/index.js written')
 const body = readFileSync(join(root, 'src', 'client', 'index.js'), 'utf8')
 const wrapped = [
   'window.__ModuleLoader__.load({',
-  '\tid: "dsh-notify-plus",',
+  '\tid: "dsh-pulse",',
   '\tfactory: (require) => {',
   '\t\tvar module = { exports: {} };',
   '\t\tvar exports = module.exports;',

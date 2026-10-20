@@ -3,76 +3,76 @@
   "sampleRate": 44100,
   "sounds": [
     {
-      "id": "builtin:crystal",
-      "file": "01-crystal.wav",
-      "name": "水晶铃",
-      "description": "两音上行，明亮但不刺耳；正常完成的首选。",
-      "seconds": 1.4,
+      "id": "builtin:pulse",
+      "file": "01-pulse.wav",
+      "name": "脉冲",
+      "description": "单音下滑，最短的完成提示。",
+      "seconds": 0.34,
       "scene": "finished",
-      "peak": 0.6
+      "peak": 0.55
     },
     {
-      "id": "builtin:marimba",
-      "file": "02-marimba.wav",
-      "name": "木琴",
-      "description": "温暖的木质三连音，低调、耐听。",
-      "seconds": 1.2,
+      "id": "builtin:blip",
+      "file": "02-blip.wav",
+      "name": "双点",
+      "description": "两下高频短音，清晰、克制。",
+      "seconds": 0.3,
       "scene": "finished",
-      "peak": 0.6
+      "peak": 0.55
     },
     {
-      "id": "builtin:harp",
-      "file": "03-harp.wav",
-      "name": "竖琴",
-      "description": "四音上行琶音，柔和，适合长时间工作。",
-      "seconds": 1.5,
-      "scene": "finished",
-      "peak": 0.6
+      "id": "builtin:tick",
+      "file": "03-tick.wav",
+      "name": "轻点",
+      "description": "极短的高频点，几乎不打断思路。",
+      "seconds": 0.16,
+      "scene": "attention",
+      "peak": 0.95
     },
     {
-      "id": "builtin:woodblock",
-      "file": "04-woodblock.wav",
-      "name": "木鱼",
-      "description": "两声轻敲，最短最不打扰；适合等待确认。",
+      "id": "builtin:scan",
+      "file": "04-scan.wav",
+      "name": "扫描",
+      "description": "快速上行滑音，提示需要你看一眼。",
+      "seconds": 0.36,
+      "scene": "attention",
+      "peak": 0.45
+    },
+    {
+      "id": "builtin:low",
+      "file": "05-low.wav",
+      "name": "低频",
+      "description": "低沉的短音，出错但不刺耳。",
       "seconds": 0.6,
-      "scene": "attention",
-      "peak": 0.9
-    },
-    {
-      "id": "builtin:droplet",
-      "file": "05-droplet.wav",
-      "name": "水滴",
-      "description": "带一点回声的水滴声，提醒但不惊吓。",
-      "seconds": 0.9,
-      "scene": "attention",
-      "peak": 0.9
-    },
-    {
-      "id": "builtin:low-bell",
-      "file": "06-low-bell.wav",
-      "name": "低音钟",
-      "description": "低沉的钟声，表示出错但不刺耳。",
-      "seconds": 1.8,
       "scene": "error",
-      "peak": 0.5
+      "peak": 0.55
     },
     {
-      "id": "builtin:descend",
-      "file": "07-descend.wav",
+      "id": "builtin:error",
+      "file": "06-error.wav",
       "name": "下行双音",
-      "description": "柔和的小三度下行，比系统错误音克制。",
-      "seconds": 1.2,
+      "description": "两音下行，明确但不夸张。",
+      "seconds": 0.52,
       "scene": "error",
-      "peak": 0.2
+      "peak": 0.45
     },
     {
-      "id": "builtin:glass",
-      "file": "08-glass.wav",
-      "name": "玻璃琶音",
-      "description": "清亮的四音琶音，适合超时催办。",
-      "seconds": 1.4,
+      "id": "builtin:arc",
+      "file": "07-arc.wav",
+      "name": "弧线",
+      "description": "三音上行琶音，适合超时催办。",
+      "seconds": 0.5,
       "scene": "reminder",
-      "peak": 0.65
+      "peak": 0.6
+    },
+    {
+      "id": "builtin:chime",
+      "file": "08-chime.wav",
+      "name": "金属铃",
+      "description": "单音金属铃，干净的完成替代音。",
+      "seconds": 0.72,
+      "scene": "finished",
+      "peak": 0.6
     }
   ]
 }
