@@ -4,6 +4,7 @@ const STYLE_ID = 'dsh-bing-style'
 
 const CSS = [
   '.dsh_bing_section{max-width:760px;display:flex;flex-direction:column;gap:14px;color:var(--dsw-alias-label-primary)}',
+  '.dsh_bing_detail{margin-top:20px;padding-top:16px;border-top:1px solid var(--dsw-alias-border-l2)}',
   '.dsh_bing_h2{margin:0;font-size:18px;font-weight:600}',
   '.dsh_bing_subtitle{margin:0;color:var(--dsw-alias-label-tertiary);font-size:13px;line-height:20px}',
   '.dsh_bing_card{border:1px solid var(--dsw-alias-border-l2);border-radius:10px;padding:12px 14px;display:flex;flex-direction:column;gap:10px}',

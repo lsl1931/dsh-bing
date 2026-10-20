@@ -18,7 +18,7 @@ const {
 const { activeQuestions, questionSummary } = require('./questions.cjs')
 const notifier = require('./notifier.cjs')
 const { NS, zh, en, fmt } = require('./locales.cjs')
-const { SettingsPage, PluginsTab } = require('./ui.cjs')
+const { BundleConfig } = require('./ui.cjs')
 const { adoptStyles } = require('./styles.cjs')
 
 /** Client services required before apply runs. */
@@ -407,23 +407,12 @@ function apply(ctx) {
     clearCache: () => notifier.clearCache(),
   })
 
-  ctx.slots.inject('settings.section', () => ctx.slots.register({
-    name: 'settings.section',
-    id: 'bing',
-    order: 60,
-    label: () => t('nav'),
+  ctx.slots.inject('plugins.bundle.config', () => ctx.slots.register({
+    name: 'plugins.bundle.config',
+    key: 'dsh-bing',
     locale: NS,
     inject: face,
-  }, SettingsPage))
-
-  ctx.slots.inject('settings.plugins.tab', () => ctx.slots.register({
-    name: 'settings.plugins.tab',
-    id: 'bing-sounds',
-    order: 90,
-    label: () => t('navSounds'),
-    locale: NS,
-    inject: face,
-  }, PluginsTab))
+  }, BundleConfig))
 }
 
 exports.apply = apply

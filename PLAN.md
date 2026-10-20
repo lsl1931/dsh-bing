@@ -13,7 +13,7 @@
 1. 会话结束、出错、或停下来等人时弹 Windows 原生通知，**标题一定带项目名**。
 2. 通知正文带**会话标题**（这一次对话是哪一条）和结果摘要，不让用户猜。
 3. 内置一组**电子、极简、短促**的提示音（8 个，最长 0.72 秒），四类场景各自可选，**每个都能当场试听**。
-4. 音效选择放在两个地方：设置 → 插件（内置插件页）→ 「通知音效」标签页（主入口），以及设置 → 通知（完整设置页）。
+4. 音效与开关放在侧边栏 **插件 → dsh-bing 详情页**，通过官方 `plugins.bundle.config` 内联渲染；不再放设置里。
 5. 支持导入自己的音效文件；导入后出现在选择器里，可预览、可删除。
 6. 窗口有焦点时不打扰；点通知把 DSH 窗口拉回前台；切回窗口或关掉提示音时，正在响的声音立刻停。
    宿主 Toast 的点击回包只有 dsh://open（桌面壳只认这一个字符串），所以 v1 不承诺“跳到某条会话”；要跳会话得等壳开放带 session 参数的激活路径。
@@ -53,7 +53,7 @@
 | 标题 | workspaceName(cwd) || displayTitle | 项目名解析链：重命名过的工作区标题 → cwd basename → 真实会话标题 → DSH | 默认分区标题对所有会话都一样；未重命名工作区按 cwd 区分，重命名后才用工作区标题 |
 | 正文 | 回复摘要；没有会话标题 | 会话标题 + 摘要（最多两行 body text，摘要限 42 字符） | 用户明确抱怨“不知道是哪个项目/哪次会话” |
 | 音效 | 2 个作者 wav + Windows 20 个；默认 chimes/error | 8 个电子/极简合成短音（正弦/方波/加法铃），四组各自默认 | 系统音效彼此太像，原声采样不符合口味；合成音可控、可改、体积小 |
-| 选择入口 | 设置 → 通知 | 设置 → 插件 → 通知音效（settings.plugins.tab）+ 设置 → 通知 | 用户希望“在插件目录这边”就能调；顶层插件管理器页没有公开插槽，只能用设置里的插件页 |
+| 选择入口 | 设置 → 通知 | 插件 → dsh-bing → 内联配置区（plugins.bundle.config，key dsh-bing） | 用户明确要在插件页里调；这是 plugin-manager 给组合包自带配置的官方 slot |
 | 提问来源 | 自 fold tool/call + ptc，另加宿主瀑布 | 官方 userQuestions 投影 + 宿主队列只补 plan-review | 少一个来源；也不会把 continued 的提问误清掉 |
 | 试听 | 发一条测试 toast | 专用 /preview 路由，只播声音不弹通知 | 调音效时不该刷屏通知中心 |
 | 依赖 | TypeScript + zod + rolldown，宿主 bundle 210KB | 纯 JS、零依赖、build.mjs 只做包装 | 与本地现有插件一致，链接安装即可，不需要构建工具链 |
@@ -86,7 +86,7 @@
     POST /dsh-bing/toast ──► PowerShell：ToastNotification + SoundPlayer
         ▲
         │
-    client: settings store（localStorage）◄── 设置页 / 插件页的选择器
+    client: settings store（localStorage）◄── 插件详情页配置区
         │
         └── POST /preview（只播声音）、/silence、/sound-library …
 
@@ -115,7 +115,7 @@
           runner.cjs          边沿检测、去重、新鲜度
           questions.cjs       归一化 userQuestions 与宿主 plan-review 队列
           notifier.cjs        13 条路由的 fetch 封装
-          ui.cjs              SoundPicker + 设置页 + 插件页 tab（createElement）
+          ui.cjs              SoundPicker + 插件详情页配置面板（createElement）
           locales.cjs         zh / en 字典
           styles.cjs          注入 CSS，使用 DSH 设计 token
       sounds/
@@ -263,7 +263,7 @@ definition 必须显式给 stateVersion（registry 会校验 Number.isSafeIntege
     exports.apply = function apply(ctx) { … }
 
 - sessions：session list（byId / ids / projectionValues，含官方 userQuestions）。
-- slots：settings.section 与 settings.plugins.tab。
+- slots：plugins.bundle.config（key dsh-bing）。
 - locale：注册 bing 命名空间。
 - workspaces 用 ctx.get('workspaces') **可选读取**，不要放进 inject：它只用于项目名富化，缺了也必须照常通知。
 - uiWorkspace 同样可选：v1 点通知只 focus 窗口，不调用 openSession；以后壳支持跳会话时再启用。
@@ -363,16 +363,22 @@ localStorage key：dsh-bing.v1
 - 无障碍：role="listbox"/"option"，aria-selected，触发器 aria-expanded。
 - 加载库失败时只显示内置音效，不阻塞页面。
 
-### 7.7 两个挂载点
+### 7.7 挂载点：插件详情页（唯一入口）
 
-1. 设置 → 通知（settings.section，id: bing，order 60）
-   - 总开关、提示音开关、四类结束状态、三类等待、催办分钟数、测试按钮、自定义音效管理、诊断入口。
-2. 设置 → 插件（内置插件页）→ 通知音效（settings.plugins.tab，id: bing-sounds，order 90）
-   - 四个场景选择器 + 试听 + 导入按钮 + “打开完整设置”链接。
-   - 两个挂载点都用 ctx.slots.inject(<slotName>, () => ctx.slots.register(...)) 包一层，等插槽声明就绪再注册；直接 register 会在壳还没声明插槽时被丢弃。
-   - 可行性已在 0.2.1-rc.2 的 dsh-client-ui-settings-plugins 中确认：settings.plugins.tab 是 kind: list, scope: root 的列表插槽，第三方客户端插件可以注册（inventory 自己就注册了 id: all）。
-   - 注意：截图里的顶层“插件”管理器页是桌面壳自己的页面，没有公开插槽；插件不能往那里加控件。这里指的是设置内的插件页，只差一层。要放到顶层页需要改 harness，本插件不做。
-   - 如果未来该插槽收紧，回退到 settings.section，功能不丢。
+- 注册 `plugins.bundle.config`，key 为 `dsh-bing`：
+
+      ctx.slots.inject('plugins.bundle.config', () => ctx.slots.register({
+        name: 'plugins.bundle.config',
+        key: 'dsh-bing',
+        locale: NS,
+        inject: face,
+      }, BundleConfig))
+
+- plugin-manager 的 PackageDetail 用 `configLedger.bundles.has(pkg.name)` 判断是否已配置，然后把该 slot 渲染在**描述与组件列表之间**，所以控件就在 dsh-bing 的插件详情页里，不需要用户去设置。
+- 面板包含：总开关、提示音、五类结束状态、三类等待、四类音效、催办分钟、测试、自定义音效导入/删除/缓存。
+- 不再注册 `settings.section` 或 `settings.plugins.tab`；设置里没有这个插件的入口。
+- `plugins.detail.section` 是给“别的插件对这个包发表意见”的 slot，不用来放自己的配置。
+- 该 slot 在 0.2.1-rc.2 的 `dsh-client-ui-plugin-manager` 中已核实（PackageDetail 渲染 + configLedger）。未来的 slot 改名按插件管理器 README 迁移；host 路由不依赖 UI。
 
 ### 7.8 样式
 
@@ -416,15 +422,15 @@ localStorage key：dsh-bing.v1
 ### 8.4 用户扩展
 
 - 内置音效：把 wav 丢进 sounds/，在 catalog.json 加一行，重新构建；适合开发者。
-- 自定义音效：设置页「添加音效…」，复制到 %LOCALAPPDATA%\dsh-bing\custom；适合普通使用。
+- 自定义音效：插件详情页「添加音效…」，复制到 %LOCALAPPDATA%\dsh-bing\custom；适合普通使用。
 - 删除只删 custom，不碰内置文件。
 
 ## 9. 兼容性与风险
 
 | 风险 | 影响 | 对策 |
 | --- | --- | --- |
-| settings.plugins.tab 不是稳定公共契约 | 设置内插件页 tab 消失 | 功能同时挂在 settings.section；启动时检测 slots 是否存在 |
-| 顶层“插件”管理器页没有插槽 | 无法把选择器放进截图那页 | 放到设置 → 插件页；要改顶层页需改 harness，不在本插件范围 |
+| plugins.bundle.config 不是稳定公共契约 | 插件详情页的配置区消失 | 官方 slot；升级时按 plugin-manager README 核对；host 路由不受影响 |
+| 插件管理器升级改 slot 名 | 控件位置变化 | 用宿主路由仍可调试；README 记录 0.2.1-rc.2 的 slot 名 |
 | 点通知只能回前台 | 不能跳到某条会话 | v1 明确只回前台；跳会话需要壳支持带 session 的激活路径 |
 | workspaces 服务形状变化 | 项目名退回 cwd | 解析函数对缺失字段全部容错，单测覆盖 |
 | 运行时升级到 0.3 | Loader 跳过插件 | peerDependencies 声明范围；README 写 allow-version 兜底 |
@@ -456,7 +462,7 @@ localStorage key：dsh-bing.v1
 1. link 安装并重启，插件页显示“运行中”。
 2. 在一个项目会话里跑完一轮，通知标题是「项目名 · 已完成」，正文第一行是会话标题。
 3. 在另一个项目里跑完，标题换成另一个项目名。
-4. 设置 → 插件（内置插件页）→ 通知音效，四个场景都能展开、试听、保存；试听不产生通知。
+4. 侧边栏 插件 → dsh-bing 详情页，配置区四个场景都能展开、试听、保存；试听不产生通知。
 5. 选一个自定义 wav，重启后仍是它。
 6. 窗口在前台时跑完一轮，不弹通知。
 7. 点通知，窗口回到前台（不跳会话；这是宿主 Toast 点击路径的限制，不是 bug）。
@@ -471,7 +477,7 @@ localStorage key：dsh-bing.v1
 | M0（已完成） | 仓库、构建、音效目录与 8 个 wav、规划 | package.json, build.mjs, sounds/, PLAN.md | npm run check 通过 |
 | M1（已实现） | 宿主：schema、projection（turn + approval）、toast/preview/silence/focus/foreground/debug/report（7 条路由） | src/index.js, src/shared/* | projection 单测；debug 路由可用 |
 | M2（已实现） | 客户端：watcher（turn + approval + userQuestions + plan-review）、项目名、文案、toast、/questions 路由 | src/client/{index,project,summary,runner,questions,notifier}.cjs | 真机收到带项目名的通知 |
-| M3（已实现） | 设置页 + 插件页音效选择器 | ui.cjs, styles.cjs, locales.cjs | 四组可选可试听 |
+| M3（已实现） | 插件详情页配置面板（音效 + 开关） | ui.cjs, styles.cjs, locales.cjs | 四组可选可试听 |
 | M4（已实现） | 自定义音效导入/删除、缓存、催办、sound-library 等 5 条路由 | routes + library UI | 导入 wav 并重启仍生效 |
 | M5（待做） | 手工验收记录、README 截图/诊断 | README, docs/acceptance | 手工清单 10 项全过 |
 
@@ -482,5 +488,5 @@ localStorage key：dsh-bing.v1
 1. 是否要“轻/标准”两档音量：需要宿主对 wav 做增益并缓存，成本约半天。
 2. 通知正文是否要带耗时/文件数/Token：会增加 projection 字段与正文长度，v1 先不做。
 3. 是否与 dsh-notify-desktop 并存：并存会出现两条通知；建议装了本插件就禁用旧的（README 写清楚）。
-4. 是否接受“设置 → 插件页”而不是截图里的顶层插件管理器页：顶层页没有公开插槽；要放那里只能改 harness。
+4. 已解决：控件现在就在插件详情页（plugins.bundle.config），不需要改 harness。
 5. 点通知是否必须跳会话：宿主 Toast 只有 dsh://open，跳会话需要桌面壳新增带 session 参数的激活路径。

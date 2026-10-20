@@ -195,7 +195,7 @@ function LibraryCard(props) {
         : null))
 }
 
-function SettingsPage(props) {
+function ControlPanel(props) {
   const t = typeof props.t === 'function' ? props.t : key => key
   const settings = useSettings(props.store)
   const { library, reload } = useLibrary(props.loadLibrary)
@@ -290,40 +290,8 @@ function SettingsPage(props) {
     }))
 }
 
-function PluginsTab(props) {
-  const t = typeof props.t === 'function' ? props.t : key => key
-  const settings = useSettings(props.store)
-  const { library, reload } = useLibrary(props.loadLibrary)
-  const [note, setNote] = useState('')
-  const set = props.set
-  const preview = id => {
-    void props.previewSound(id)
-  }
-  const addSound = () => {
-    void props.pickFile().then(path => {
-      if (path === '') return null
-      return props.importSound(path)
-    }).then(name => {
-      if (name === null || name === undefined) {
-        setNote(t('addFailed'))
-        return
-      }
-      setNote(fmt(t('added'), { name }))
-      reload()
-    }).catch(() => setNote(t('addFailed')))
-  }
-  return h('div', { className: 'dsh_bing_section' },
-    h('h3', { className: 'dsh_bing_h2' }, t('soundsTitle')),
-    h('p', { className: 'dsh_bing_subtitle' }, t('soundsDesc')),
-    h('div', { className: 'dsh_bing_card' },
-      h(SoundRow, { group: 'finished', label: t('soundFinished'), t, settings, set, library, onPreview: preview }),
-      h(SoundRow, { group: 'error', label: t('soundError'), t, settings, set, library, onPreview: preview }),
-      h(SoundRow, { group: 'attention', label: t('soundAttention'), t, settings, set, library, onPreview: preview }),
-      h(SoundRow, { group: 'reminder', label: t('soundReminder'), t, settings, set, library, onPreview: preview }),
-      h('div', { className: 'dsh_bing_actions' },
-        h('button', { type: 'button', className: 'dsh_bing_button', onClick: addSound }, t('addSound')),
-        h('button', { type: 'button', className: 'dsh_bing_button', onClick: () => props.sendTest() }, t('testButton'))),
-      note === '' ? null : h('span', { className: 'dsh_bing_note' }, note)))
+function BundleConfig(props) {
+  return h(ControlPanel, props)
 }
 
-module.exports = { SettingsPage, PluginsTab, SoundPicker, labelOf, useLibrary, useSettings }
+module.exports = { BundleConfig, ControlPanel, SoundPicker, labelOf, useLibrary, useSettings }
