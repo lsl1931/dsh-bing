@@ -4,6 +4,8 @@
 // equals the basename of its path, and a user rename makes the two differ; that
 // is the signal this module uses. A default workspace can hold sessions from
 // unrelated directories, so the session cwd wins there.
+const DEFAULT_TITLES = new Set(['默认分区', '默认工作区', 'Default', 'Default workspace', 'default-workspace'])
+
 const CJK = /[\u1100-\u115F\u2E80-\u303E\u3041-\u33FF\u3400-\u4DBF\u4E00-\u9FFF\uAC00-\uD7A3\uF900-\uFAFF\uFE30-\uFE4F\uFF00-\uFF60\uFFE0-\uFFE6]/
 
 function charWidth(char) {
@@ -46,7 +48,7 @@ function projectLabel(sessionId, summary, workspaces) {
   const cwdName = basename(row.cwd)
   if (workspace !== undefined && typeof workspace.title === 'string' && workspace.title.trim() !== '') {
     const pathName = basename(workspace.path)
-    const renamed = pathName !== '' && workspace.title !== pathName
+    const renamed = pathName !== '' && workspace.title !== pathName && !DEFAULT_TITLES.has(workspace.title)
     if (renamed) return clipWidth(workspace.title, 40)
     if (cwdName !== '') return clipWidth(cwdName, 40)
     return clipWidth(workspace.title, 40)

@@ -290,7 +290,7 @@ definition 必须显式给 stateVersion（registry 会校验 Number.isSafeIntege
 规则与理由：
 
 1. 0.2.1-rc.2 的工作区没有“是否默认”的公开标记；默认工作区的 title 就是 path 的 basename，且重命名后 title 会与 path basename 不同。
-2. 所以用 title !== basename(path) 判断“用户重命名过”，重命名过的标题优先（最像项目名）。
+2. 所以用 title !== basename(path) 判断“用户重命名过”，重命名过的标题优先（最像项目名）；本地化默认名（默认分区/Default）也算未重命名。
 3. 未重命名的工作区（含默认分区）用 cwd 最后一段：同一个默认工作区里可以放不同目录的会话，工作区标题没有区分度。
 4. cwd 为空（老会话/子代理）时退回真实会话标题 summary.title，再退回 displayTitle，最后 DSH。
 5. 标题最多 40 个显示宽度（CJK 记 2），超出用省略号。
@@ -302,7 +302,7 @@ definition 必须显式给 stateVersion（registry 会校验 Number.isSafeIntege
 - 会话标题 = summary.title（DSH 生成的真实标题）。不要用 displayTitle：它在没有标题时会回落到 cwd basename，正好和项目名重复。
 - 与项目名相同就省略，避免 “dsh-plugins / dsh-plugins”。
 - 摘要 = 最后一条助手回复扁平化：去代码块、链接、标题、列表符号、表格、粗斜体、HTML 标签，折叠空白。
-- 摘要上限：有会话标题行 42 字符，没有时 56 字符。参考实现实测 body 约 26 个 CJK/行、三行封顶；两行正文必须更短。
+- 会话标题行最多 36 字符；摘要上限：有会话标题行 42 字符，没有时 56 字符。参考实现实测 body 约 26 个 CJK/行、三行封顶；两行正文合计控制在 78 字符左右。
 - 空摘要时用“这一轮已结束。”/“有一条待处理的确认。”等兜底。
 
 最终文案：
@@ -449,7 +449,7 @@ localStorage key：dsh-bing.v1
 - routes：用 fake ctx 注册后测 13 条路由、method/header、sound-library、debug；不启动真实 HTTP。
 - sounds：8 个内置 id 可解析、静音/未知回落、路径穿越被拒。
 
-当前 `npm test` 共 34 个用例，全部通过。
+当前 `npm test` 共 35 个用例，全部通过。
 
 ### 10.2 手工验收清单
 

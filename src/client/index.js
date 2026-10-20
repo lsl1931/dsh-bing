@@ -257,7 +257,9 @@ function apply(ctx) {
     for (const id of [...observedTurn.keys()]) if (!liveSessions.has(id)) observedTurn.delete(id)
     for (const id of [...knownApprovals.keys()]) if (!liveSessions.has(id)) knownApprovals.delete(id)
     for (const id of [...knownQuestions.keys()]) if (!liveSessions.has(id)) knownQuestions.delete(id)
-    for (const entry of [...waits.values()]) if (!liveSessions.has(entry.sessionId)) waits.delete(waitKey(entry.sessionId, entry.requestId))
+    for (const entry of [...waits.values()]) {
+      if (entry.sessionId !== 'global' && !liveSessions.has(entry.sessionId)) waits.delete(waitKey(entry.sessionId, entry.requestId))
+    }
   }
 
   const rem = () => {

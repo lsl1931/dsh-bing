@@ -15,6 +15,7 @@ function plainSummary(text, limit) {
   out = out.replace(/\*\*(.+?)\*\*/g, '$1')
   out = out.replace(/(?:\*|_)([^*_]+)(?:\*|_)/g, '$1')
   out = out.replace(/<[^>]+>/g, ' ')
+  out = out.replace(/\u001b\[[0-9;]*m/g, '')
   out = out.replace(/\s+/g, ' ').trim()
   if (out.length <= limit) return out
   const cut = Math.max(1, limit - 1)
@@ -27,7 +28,7 @@ function composeToast(input) {
   const title = project === '' ? status : project + ' · ' + status
   const lines = []
   const sessionTitle = String(input.sessionTitle || '').trim()
-  if (sessionTitle !== '' && sessionTitle !== project) lines.push(sessionTitle.slice(0, 64))
+  if (sessionTitle !== '' && sessionTitle !== project) lines.push(sessionTitle.slice(0, 36))
   const limit = lines.length > 0 ? 42 : SUMMARY_LIMIT
   const body = plainSummary(input.body, limit) || String(input.fallback || '').trim()
   if (body !== '') lines.push(body)

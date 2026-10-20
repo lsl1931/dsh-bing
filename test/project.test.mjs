@@ -28,6 +28,11 @@ test('the default workspace does not mask a different cwd', () => {
   assert.equal(projectLabel('s4', { cwd: 'C:\\RJ\\other-project' }, defaultWorkspace), 'other-project')
 })
 
+test('a localized default title still uses the session cwd', () => {
+  const defaultWorkspace = [{ workspaceId: 'd', title: '默认分区', path: 'C:\\Users\\me\\Documents\\default-workspace', sessionIds: ['s5'] }]
+  assert.equal(projectLabel('s5', { cwd: 'C:\\RJ\\real-project' }, defaultWorkspace), 'real-project')
+})
+
 test('long CJK names are bounded by display width', () => {
   const label = projectLabel('s5', { cwd: 'C:\\RJ\\' + '很长的项目名称'.repeat(4) }, [])
   assert.ok(label.length > 0)
