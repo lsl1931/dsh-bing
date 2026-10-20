@@ -3,6 +3,18 @@
   "version": "0.2.1",
   "description": "DSH desktop notifications that name the project, with a soft phone-style bing and a warm, selectable sound pack.",
   "type": "module",
+  "author": {
+    "name": "lsl1931",
+    "url": "https://github.com/lsl1931"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lsl1931/dsh-bing.git"
+  },
+  "homepage": "https://github.com/lsl1931/dsh-bing#readme",
+  "bugs": {
+    "url": "https://github.com/lsl1931/dsh-bing/issues"
+  },
   "main": "lib/index.js",
   "exports": {
     ".": "./lib/index.js",
@@ -14,6 +26,7 @@
     "sounds",
     "cordis.patch.yml",
     "README.md",
+    "CHANGELOG.md",
     "LICENSE"
   ],
   "dsh": {
