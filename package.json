@@ -1,6 +1,6 @@
 {
   "name": "dsh-bing",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "DSH desktop notifications that name the project, with a soft phone-style bing and a warm, selectable sound pack.",
   "type": "module",
   "author": {
@@ -19,10 +19,12 @@
   "exports": {
     ".": "./lib/index.js",
     "./client": "./lib/client.js",
+    "./locale/*.json": "./locale/*.json",
     "./package.json": "./package.json"
   },
   "files": [
     "lib",
+    "locale",
     "sounds",
     "cordis.patch.yml",
     "README.md",

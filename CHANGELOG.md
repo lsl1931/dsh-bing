@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.2 — 2026-11-07
+
+- feat: localized plugin display metadata (`locale/zh.json`, `locale/en.json`).
+
 ## 0.2.1 — 2026-10-19
 
 - Replaced the electronic preset pack with eight warm, phone-style tones:
