@@ -38,7 +38,7 @@
 | 播放器 | 从子进程里 WinRT/WPF/WMP 都打不开文件，SoundPlayer 可靠 | 音频只走 System.Media.SoundPlayer |
 | 非 wav | SoundPlayer 只认 wav | 自定义 mp3 等用 ffmpeg 转一次 wav 进缓存；没有 ffmpeg 就只支持 wav |
 | Toast 子进程 | stdio: 'ignore' 时子进程正常退出但 Windows 不显示通知 | 必须保留管道 stdio 并 drain |
-| AUMID | electron.app.DeepSeek Harness | 通知来源显示为 DeepSeek Harness |
+| AUMID | com.deepseek.dsh（与桌面端 dshDesktopAppId、开始菜单快捷方式一致） | 通知来源显示为 DeepSeek Harness，并带应用图标 |
 | 回前台 | 渲染层无法拉起自己的窗口 | 点通知走 dsh://open，由单实例逻辑 restore/show/focus |
 | 焦点判断 | document.hasFocus() 在提问页会误报“失焦” | 客户端问宿主 OS 级前台答案，并保留 5 秒 focus 宽限 |
 | 提问投影 | dsh-user-questions 已注册 client-visible 投影 userQuestions：active[{callId,questions,state:open|continued}] + settled | 登录态提问直接读这个投影，不再自己 fold ask_user_question |

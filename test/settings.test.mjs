@@ -45,6 +45,16 @@ test('update clamps minutes and persists', () => {
   assert.equal(settings.readSettings(storage).soundEnabled, false)
 })
 
+test('subagent turn notifications stay off by default', () => {
+  assert.equal(settings.DEFAULT_SETTINGS.notifySubagent, false)
+  const storage = memory()
+  storage.setItem(settings.PERSIST_KEY, JSON.stringify({ enabled: true }))
+  assert.equal(settings.readSettings(storage).notifySubagent, false)
+  const store = settings.createSettingsStore(memory())
+  store.update({ notifySubagent: true })
+  assert.equal(store.getSnapshot().notifySubagent, true)
+})
+
 test('subscribers observe updates', () => {
   const store = settings.createSettingsStore(memory())
   let calls = 0

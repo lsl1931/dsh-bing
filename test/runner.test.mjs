@@ -10,6 +10,14 @@ test('turn advance only fires after the first baseline', () => {
   assert.deepEqual(runner.turnAdvance(3, { turn: 3 }), { nextTurn: 3, fresh: false })
 })
 
+test('delegated children are not root sessions', () => {
+  assert.equal(runner.isRootSession({ origin: 'subagent', parentId: 'parent' }), false)
+  assert.equal(runner.isRootSession({ parentId: 'parent' }), false)
+  assert.equal(runner.isRootSession({ origin: undefined, parentId: undefined }), true)
+  assert.equal(runner.isRootSession({ parentId: '' }), true)
+  assert.equal(runner.isRootSession(undefined), true)
+})
+
 test('freshness is bounded', () => {
   assert.equal(runner.isFresh(1000, 2000), true)
   assert.equal(runner.isFresh(1000, 61001), false)

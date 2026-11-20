@@ -18,7 +18,7 @@ These come from the reference implementation's field notes and are load-bearing 
 - The toast is raised from Windows PowerShell 5.1; use its absolute path, not a bare powershell name.
 - File sounds must play through System.Media.SoundPlayer. WinRT/WPF/WMP cannot open a media file from a spawned child here.
 - A toast's audio element only accepts ms-winsoundevent values. To play your own sound, mute the toast and play it in the host.
-- The AUMID is electron.app.DeepSeek Harness; the click path is dsh://open.
+- The toast AUMID must equal the desktop app's own id (com.deepseek.dsh, from the app package.json dshDesktopAppId and the Start Menu shortcut's System.AppUserModel.ID). A stale or unregistered id makes Windows print the raw id as the source name and show no icon. The click path is dsh://open.
 - document.hasFocus() is not trustworthy (the question view steals focus). Ask the host for the OS foreground answer and keep a short grace window.
 - The projection fold must return the SAME state reference for events it does not handle; the registry gates change notifications on Object.is.
 - Client-visible routes are outside /api, so each handler owns its method + same-origin header check.

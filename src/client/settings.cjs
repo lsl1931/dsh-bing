@@ -21,6 +21,9 @@ const DEFAULT_SETTINGS = Object.freeze({
   notifyApproval: true,
   notifyQuestion: true,
   notifyPlanReview: true,
+  // Delegated children (subagents, team members) finish constantly; announcing
+  // each one is noise, so it is opt-in.
+  notifySubagent: false,
   remindAfterMinutes: 10,
 })
 

@@ -3,6 +3,16 @@ const FRESH_EVENT_MS = 60000
 const DEDUPE_MS = 3000
 const ASK_TWIN_MS = 5000
 
+/** Whether a list entry is a user's own root session.
+ * Delegated children carry origin: 'subagent' and the list entry exposes the
+ * parent as parentId; a teammate session is a subagent too, so both signals
+ * exclude it. An entry without either field stays notifiable. */
+function isRootSession(summary) {
+  if (summary === null || typeof summary !== 'object') return true
+  if (summary.origin === 'subagent') return false
+  return typeof summary.parentId !== 'string' || summary.parentId === ''
+}
+
 function turnAdvance(previousTurn, projection) {
   const turn = projection !== undefined && typeof projection.turn === 'number' ? projection.turn : 0
   return { nextTurn: turn, fresh: previousTurn !== undefined && turn > previousTurn }
@@ -45,6 +55,7 @@ module.exports = {
   FRESH_EVENT_MS,
   DEDUPE_MS,
   ASK_TWIN_MS,
+  isRootSession,
   turnAdvance,
   isFresh,
   newRequestIds,

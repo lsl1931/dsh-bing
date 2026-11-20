@@ -8,6 +8,7 @@ const {
   DEDUPE_MS,
   askKey,
   isFresh,
+  isRootSession,
   newRequestIds,
   recentlyKeyed,
   remember,
@@ -185,7 +186,10 @@ function apply(ctx) {
       // Finished turns ------------------------------------------------------
       const advance = turnAdvance(observedTurn.get(id), projection)
       observedTurn.set(id, advance.nextTurn)
-      if (advance.fresh && projection !== undefined && isFresh(projection.endedAt, now)) {
+      // A delegated child (subagent, teammate) finishing is not the user's
+      // turn ending; only announce it when the setting asks for it.
+      const announceTurn = settings.notifySubagent || isRootSession(summary)
+      if (advance.fresh && announceTurn && projection !== undefined && isFresh(projection.endedAt, now)) {
         const reason = projection.reason
         const status = statusKey(reason)
         if (status !== undefined) {
