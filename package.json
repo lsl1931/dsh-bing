@@ -1,6 +1,6 @@
 {
   "name": "dsh-bing",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "description": "DSH desktop notifications that name the project, with a soft phone-style bing and a warm, selectable sound pack.",
   "type": "module",
   "author": {
